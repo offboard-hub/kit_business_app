@@ -94,7 +94,7 @@ serve(async (req) => {
 
     // Envoi de l'email
     const kitId = newKit.id;
-    const baseUrl = "https://uurbkaagedossfcorhll.supabase.co/functions/v1/view-kit";
+    const baseUrl = "https://ynephuutnazdnjhsdlsy.supabase.co/functions/v1/view-kit";
     
     const emailHtml = "<div style='font-family: Arial; text-align: center; padding: 40px; background: #f4f4f5;'>" +
       "<h1 style='color: #111;'>🎉 Votre Kit Business est prêt</h1>" +

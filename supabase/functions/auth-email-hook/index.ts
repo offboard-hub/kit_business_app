@@ -1,46 +1,39 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "@supabase/server";
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
-console.log("Hello from Functions!");
+serve(async (req) => {
+  try {
+    const payload = await req.json()
+    
+    // Supabase nous envoie l'email et le lien magique dans le payload du hook
+    const email = payload.user.email
+    const magicLink = payload.email_data?.email_action_link || payload.email_data?.token_hash_link || "Lien introuvable"
 
-// This endpoint uses 'publishable' | 'secret' access, apiKey is required.
-// Use publishable for Client-facing, key-validated endpoints
-// Use secret for Server-to-server, internal calls
-export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    // Called by another service with a secret key
-    // ctx.supabaseAdmin bypasses RLS — use for privileged operations
-    /*
-    if (ctx.authMode === "secret") {
-      const { user_id } = await req.json();
-      const { data } = await ctx.supabaseAdmin.auth.admin.getUserById(user_id);
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + RESEND_API_KEY,
+      },
+      body: JSON.stringify({
+        from: 'Kit Business <contact@e-booklive.offboard-hub.com>',
+        to: [email],
+        subject: "✨ Votre lien de connexion Kit Business",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; text-align: center; padding: 40px; background: #14123A; color: #F6EBD4;">
+            <h1 style="color: #E8B04B;">Votre lien est prêt</h1>
+            <p>Cliquez sur le bouton ci-dessous pour accéder à votre espace.</p>
+            <a href="${magicLink}" style="display: inline-block; background: #E8B04B; color: #14123A; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px;">Me connecter</a>
+          </div>
+        `,
+      }),
+    })
 
-      return Response.json({
-        email: data?.user?.email,
-      });
-    }
-    */
+    if (!res.ok) throw new Error(await res.text())
 
-    const { name } = await req.json();
-
-    return Response.json({
-      message: `Hello ${name}!`,
-    });
-  }),
-};
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/auth-email-hook' \
-    --header 'apiKey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH' \
-    --data '{"name":"Functions"}'
-
-*/
+    return new Response(JSON.stringify({ success: true }), { status: 200 })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 400 })
+  }
+})
