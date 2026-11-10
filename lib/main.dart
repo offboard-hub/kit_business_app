@@ -326,11 +326,13 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _email = TextEditingController();
+  final _password = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
     _email.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -340,20 +342,43 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _sendMagicLink() async {
-    final email = _email.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      _toast('Entrez une adresse email valide.', K.clay);
+  // FONCTION DE CONNEXION
+  Future<void> _signIn() async {
+    if (_email.text.isEmpty || _password.text.isEmpty) {
+      _toast('Remplissez tous les champs.', K.clay);
       return;
     }
     setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signInWithOtp(email: email);
-      if (!mounted) return;
-      _toast('Lien envoyé. Ouvrez votre boîte mail pour vous connecter.', const Color(0xFF2E7D5B));
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: _email.text.trim(),
+        password: _password.text.trim(),
+      );
     } catch (e) {
       if (!mounted) return;
-      _toast('Envoi impossible. Vérifiez l\'adresse et réessayez.', Colors.red.shade700);
+      _toast('Erreur : Email ou mot de passe incorrect.', Colors.red.shade700);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // FONCTION D'INSCRIPTION
+  Future<void> _signUp() async {
+    if (_email.text.isEmpty || _password.text.length < 6) {
+      _toast('Mot de passe trop court (min 6 caractères).', K.clay);
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await Supabase.instance.client.auth.signUp(
+        email: _email.text.trim(),
+        password: _password.text.trim(),
+      );
+      if (!mounted) return;
+      _toast('Compte créé ! Vous pouvez vous connecter.', const Color(0xFF2E7D5B));
+    } catch (e) {
+      if (!mounted) return;
+      _toast('Erreur lors de la création du compte.', Colors.red.shade700);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -379,60 +404,61 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.mail_outline_rounded, size: 46, color: K.gold),
+                    const Icon(Icons.lock_person_rounded, size: 46, color: K.gold),
                     const SizedBox(height: 18),
                     const Text(
-                      'Recevoir mon lien de connexion',
+                      'Connexion',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand, height: 1.2),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Entrez votre email. Nous vous envoyons un lien, un clic et vous êtes dedans.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: K.mist, fontSize: 14, height: 1.5),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: K.sand, height: 1.2),
                     ),
                     const SizedBox(height: 26),
                     TextField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       style: const TextStyle(color: K.sand),
-                      onSubmitted: (_) => _sendMagicLink(),
                       decoration: InputDecoration(
                         labelText: 'Votre email',
                         labelStyle: const TextStyle(color: K.mist),
                         filled: true,
                         fillColor: K.deep.withOpacity(0.6),
                         prefixIcon: const Icon(Icons.alternate_email, color: K.mist),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: K.gold, width: 1.5),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _password,
+                      obscureText: true,
+                      style: const TextStyle(color: K.sand),
+                      decoration: InputDecoration(
+                        labelText: 'Mot de passe',
+                        labelStyle: const TextStyle(color: K.mist),
+                        filled: true,
+                        fillColor: K.deep.withOpacity(0.6),
+                        prefixIcon: const Icon(Icons.key, color: K.mist),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      ),
+                    ),
+                    const SizedBox(height: 26),
                     SizedBox(
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _sendMagicLink,
+                        onPressed: _isLoading ? null : _signIn,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: K.gold,
                           foregroundColor: K.night,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         child: _isLoading
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(color: K.night, strokeWidth: 2.5),
-                              )
-                            : const Text('Envoyer le lien', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: K.night, strokeWidth: 2.5))
+                            : const Text('Se connecter', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                       ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: _isLoading ? null : _signUp,
+                      child: const Text('Créer un compte', style: TextStyle(color: K.gold, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
