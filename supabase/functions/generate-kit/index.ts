@@ -26,7 +26,6 @@ serve(async (req) => {
 
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY')
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
     const googleCredsRaw = Deno.env.get('GOOGLE_WORKSPACE_CREDENTIALS')
 
     const [deepseekRes, geminiRes] = await Promise.all([
@@ -106,11 +105,6 @@ serve(async (req) => {
       "<p style='margin-top: 40px;'><a href='" + sheetUrl + "' style='color: #22C55E;'>Accéder à mon Tableau Financier</a></p>" +
       "</div>";
     
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': "Bearer " + resendApiKey },
-      body: JSON.stringify({ from: 'Kit Business <contact@e-booklive.offboard-hub.com>', to: [emailClient], subject: "📘 Vos documents PDF sont prêts", html: emailHtml })
-    })
 
     // Déduire le crédit
     await supabaseClient.from('profiles').update({ credits: profile.credits - 1 }).eq('id', user.id)

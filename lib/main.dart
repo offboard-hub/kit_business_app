@@ -342,43 +342,34 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // FONCTION DE CONNEXION
-  Future<void> _signIn() async {
-    if (_email.text.isEmpty || _password.text.isEmpty) {
-      _toast('Remplissez tous les champs.', K.clay);
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _email.text.trim(),
-        password: _password.text.trim(),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _toast('Erreur : Email ou mot de passe incorrect.', Colors.red.shade700);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  // FONCTION UNIQUE : CONNEXION OU INSCRIPTION AUTOMATIQUE
+  Future<void> _loginOrSignup() async {
+    final email = _email.text.trim();
+    final password = _password.text.trim();
 
-  // FONCTION D'INSCRIPTION
-  Future<void> _signUp() async {
-    if (_email.text.isEmpty || _password.text.length < 6) {
-      _toast('Mot de passe trop court (min 6 caractères).', K.clay);
+    if (email.isEmpty || password.length < 6) {
+      _toast('Entrez un email et un mot de passe (min. 6 caractères).', K.clay);
       return;
     }
+
     setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signUp(
-        email: _email.text.trim(),
-        password: _password.text.trim(),
-      );
-      if (!mounted) return;
-      _toast('Compte créé ! Vous pouvez vous connecter.', const Color(0xFF2E7D5B));
-    } catch (e) {
-      if (!mounted) return;
-      _toast('Erreur lors de la création du compte.', Colors.red.shade700);
+      // 1. On essaie de connecter
+      await Supabase.instance.client.auth.signInWithPassword(email: email, password: password);
+    } on AuthException catch (e) {
+      // 2. Si le compte n'existe pas, on le crée automatiquement
+      if (e.message.contains('Invalid login credentials')) {
+        try {
+          await Supabase.instance.client.auth.signUp(email: email, password: password);
+          _toast('Compte créé et connecté !', const Color(0xFF2E7D5B));
+        } catch (signUpError) {
+          if (!mounted) return;
+          _toast('Erreur lors de la création du compte.', Colors.red.shade700);
+        }
+      } else {
+        if (!mounted) return;
+        _toast('Erreur : ${e.message}', Colors.red.shade700);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -407,7 +398,7 @@ class _LoginPageState extends State<LoginPage> {
                     const Icon(Icons.lock_person_rounded, size: 46, color: K.gold),
                     const SizedBox(height: 18),
                     const Text(
-                      'Connexion',
+                      'Accédez à votre espace',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: K.sand, height: 1.2),
                     ),
@@ -444,7 +435,7 @@ class _LoginPageState extends State<LoginPage> {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _signIn,
+                        onPressed: _isLoading ? null : _loginOrSignup,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: K.gold,
                           foregroundColor: K.night,
@@ -452,13 +443,13 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         child: _isLoading
                             ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: K.night, strokeWidth: 2.5))
-                            : const Text('Se connecter', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                            : const Text('Se connecter / S\'inscrire', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: _isLoading ? null : _signUp,
-                      child: const Text('Créer un compte', style: TextStyle(color: K.gold, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Pas de compte ? Il sera créé automatiquement.',
+                      style: TextStyle(color: K.mist, fontSize: 12),
                     ),
                   ],
                 ),
@@ -470,6 +461,8 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
+ 
 
 // ==========================================
 // 3. DASHBOARD
@@ -484,6 +477,7 @@ class _DashboardPageState extends State<DashboardPage> {
   int _credits = 0;
   final _secteurCtrl = TextEditingController();
   bool _isGenerating = false;
+  List<dynamic> _mesKits = [];
 
   @override
   void initState() {
@@ -498,15 +492,39 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _toast(String msg, Color color, {SnackBarAction? action}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color, behavior: SnackBarBehavior.floating, action: action));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg), 
+        backgroundColor: color, 
+        behavior: SnackBarBehavior.floating,
+        action: action,
+      ),
+    );
   }
 
   Future<void> _fetchCredits() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
-      final res = await Supabase.instance.client.from('profiles').select('credits').eq('id', user.id).maybeSingle();
+      final res = await Supabase.instance.client
+          .from('profiles')
+          .select('credits')
+          .eq('id', user.id)
+          .maybeSingle();
       if (mounted) setState(() => _credits = (res?['credits'] ?? 0) as int);
+    } catch (_) {}
+  }
+
+  Future<void> _fetchHistorique() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    try {
+      final res = await Supabase.instance.client
+          .from('kits')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      if (mounted) setState(() => _mesKits = res);
     } catch (_) {}
   }
 
@@ -514,7 +532,10 @@ class _DashboardPageState extends State<DashboardPage> {
     _toast('Paiement en cours…', K.deep);
     try {
       final res = await Supabase.instance.client.functions.invoke('verify-payment', body: {
-        'productId': productId, 'transactionId': 'TEST_TX_${DateTime.now().millisecondsSinceEpoch}', 'provider': 'test_mode', 'amountPaid': price,
+        'productId': productId,
+        'transactionId': 'TEST_TX_${DateTime.now().millisecondsSinceEpoch}',
+        'provider': 'test_mode',
+        'amountPaid': price,
       });
       if (res.status == 200) {
         await _fetchCredits();
@@ -527,20 +548,35 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  // --- GÉNÉRATION SANS EMAIL (AFFICHAGE DIRECT) ---
   Future<void> _generate() async {
-    if (_secteurCtrl.text.trim().length < 3) { _toast('Décrivez votre activité en quelques mots.', K.clay); return; }
-    if (_credits < 1) { _toast('Il vous faut au moins 1 crédit. Choisissez un kit ci-dessous.', K.clay); return; }
+    if (_secteurCtrl.text.trim().length < 3) {
+      _toast('Décrivez votre activité en quelques mots.', K.clay);
+      return;
+    }
+    if (_credits < 1) {
+      _toast('Il vous faut au moins 1 crédit. Choisissez un kit ci-dessous.', K.clay);
+      return;
+    }
     
     setState(() => _isGenerating = true);
     try {
       final res = await Supabase.instance.client.functions.invoke('generate-kit', body: {
-        'secteurClient': _secteurCtrl.text.trim(), 'emailClient': Supabase.instance.client.auth.currentUser!.email,
+        'secteurClient': _secteurCtrl.text.trim(),
+        'emailClient': Supabase.instance.client.auth.currentUser!.email,
       });
+      
       if (res.status == 200) {
         await _fetchCredits();
         if (!mounted) return;
         _secteurCtrl.clear();
-        _toast('Votre kit est prêt. Regardez dans votre boîte mail.', const Color(0xFF2E7D5B), action: SnackBarAction(label: 'Ouvrir mes mails', textColor: Colors.white, onPressed: () => launchUrl(Uri.parse('https://mail.google.com'), mode: LaunchMode.externalApplication)));
+        
+        // On affiche le résultat dans une popup
+        _showResultDialog(
+          res.data['livre'] ?? "Aucun livre généré.", 
+          res.data['prompt'] ?? "Aucun prompt généré.", 
+          res.data['sheetUrl'] ?? ""
+        );
       } else {
         throw Exception(res.data['error']);
       }
@@ -550,6 +586,107 @@ class _DashboardPageState extends State<DashboardPage> {
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
+  }
+
+  // --- FENÊTRE DE RÉSULTAT ---
+  void _showResultDialog(String livre, String prompts, String sheetUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: K.night,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 700, height: 600, padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(border: Border.all(color: K.gold.withOpacity(0.3)), borderRadius: BorderRadius.circular(20)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('✨ Votre Kit est prêt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: K.sand)),
+                  IconButton(icon: const Icon(Icons.close, color: K.mist), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+              const Divider(color: K.mist),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('📘 Livre Stratégique', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: K.gold)),
+                      const SizedBox(height: 8),
+                      Text(livre, style: const TextStyle(color: K.sand, height: 1.5)),
+                      const SizedBox(height: 24),
+                      const Text('🤖 Prompts IA', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: K.gold)),
+                      const SizedBox(height: 8),
+                      Text(prompts, style: const TextStyle(color: K.sand, height: 1.5)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (sheetUrl.isNotEmpty)
+                SizedBox(
+                  width: double.infinity, height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(sheetUrl), mode: LaunchMode.externalApplication),
+                    icon: const Icon(Icons.table_chart, color: K.night),
+                    label: const Text('Ouvrir mon Google Sheet', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(backgroundColor: K.gold, foregroundColor: K.night, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  ),
+                )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- FENÊTRE HISTORIQUE ---
+  void _showHistoriqueDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: K.night,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 600, height: 500, padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(border: Border.all(color: K.gold.withOpacity(0.3)), borderRadius: BorderRadius.circular(20)),
+          child: Column(
+            children: [
+              const Text('📚 Mes Kits', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: K.sand)),
+              const Divider(color: K.mist),
+              Expanded(
+                child: _mesKits.isEmpty
+                    ? const Center(child: Text("Aucun kit généré.", style: TextStyle(color: K.mist)))
+                    : ListView.builder(
+                        itemCount: _mesKits.length,
+                        itemBuilder: (context, index) {
+                          final kit = _mesKits[index];
+                          return ListTile(
+                            title: Text("Secteur : ${kit['secteur_client']}", style: const TextStyle(color: K.sand)),
+                            subtitle: Text(kit['created_at'].toString().substring(0, 10), style: const TextStyle(color: K.mist)),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.visibility, color: K.gold),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showResultDialog(kit['livre_html'], kit['prompts_html'], kit['sheet_url']);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Fermer', style: TextStyle(color: K.mist)),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -567,25 +704,60 @@ class _DashboardPageState extends State<DashboardPage> {
                   children: [
                     Row(
                       children: [
-                        const Expanded(child: Text('Mon espace', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: K.sand))),
+                        const Expanded(
+                          child: Text(
+                            'Mon espace',
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: K.sand),
+                          ),
+                        ),
+                        // Bouton Historique
+                        IconButton(
+                          tooltip: 'Mes Kits',
+                          icon: const Icon(Icons.folder_open_rounded, color: K.gold),
+                          onPressed: () {
+                            _fetchHistorique();
+                            _showHistoriqueDialog();
+                          },
+                        ),
+                        const SizedBox(width: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(color: K.gold, borderRadius: BorderRadius.circular(20)),
-                          child: Text('$_credits crédit${_credits > 1 ? 's' : ''}', style: const TextStyle(fontWeight: FontWeight.w800, color: K.night)),
+                          decoration: BoxDecoration(
+                            color: K.gold,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '$_credits crédit${_credits > 1 ? 's' : ''}',
+                            style: const TextStyle(fontWeight: FontWeight.w800, color: K.night),
+                          ),
                         ),
-                        IconButton(tooltip: 'Se déconnecter', icon: const Icon(Icons.logout_rounded, color: K.mist), onPressed: () => Supabase.instance.client.auth.signOut()),
+                        IconButton(
+                          tooltip: 'Se déconnecter',
+                          icon: const Icon(Icons.logout_rounded, color: K.mist),
+                          onPressed: () => Supabase.instance.client.auth.signOut(),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 28),
                     Container(
                       padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(color: K.night.withOpacity(0.7), borderRadius: BorderRadius.circular(24), border: Border.all(color: K.gold.withOpacity(0.35))),
+                      decoration: BoxDecoration(
+                        color: K.night.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: K.gold.withOpacity(0.35)),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Générez votre kit', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand)),
+                          const Text(
+                            'Générez votre kit',
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand),
+                          ),
                           const SizedBox(height: 8),
-                          const Text('Décrivez votre activité. Votre livre stratégique, vos prompts et votre sheet automatisé arrivent par email.', style: TextStyle(color: K.mist, height: 1.5)),
+                          const Text(
+                            'Décrivez votre activité. Votre livre, vos prompts et votre sheet apparaîtront instantanément.',
+                            style: TextStyle(color: K.mist, height: 1.5),
+                          ),
                           const SizedBox(height: 20),
                           LayoutBuilder(builder: (context, c) {
                             final narrow = c.maxWidth < 520;
@@ -595,40 +767,68 @@ class _DashboardPageState extends State<DashboardPage> {
                               decoration: InputDecoration(
                                 hintText: 'Ex : boulangerie à Bamako',
                                 hintStyle: TextStyle(color: K.mist.withOpacity(0.6)),
-                                filled: true, fillColor: K.deep.withOpacity(0.6),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: K.gold, width: 1.5)),
+                                filled: true,
+                                fillColor: K.deep.withOpacity(0.6),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(color: K.gold, width: 1.5),
+                                ),
                               ),
                             );
                             final button = SizedBox(
-                              height: 54, width: narrow ? double.infinity : null,
+                              height: 54,
+                              width: narrow ? double.infinity : null,
                               child: ElevatedButton(
                                 onPressed: _isGenerating ? null : _generate,
-                                style: ElevatedButton.styleFrom(backgroundColor: K.gold, foregroundColor: K.night, padding: const EdgeInsets.symmetric(horizontal: 26), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                                child: _isGenerating ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: K.night, strokeWidth: 2.5)) : const Text('Générer (1 crédit)', style: TextStyle(fontWeight: FontWeight.w800)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: K.gold,
+                                  foregroundColor: K.night,
+                                  padding: const EdgeInsets.symmetric(horizontal: 26),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: _isGenerating
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(color: K.night, strokeWidth: 2.5),
+                                      )
+                                    : const Text('Générer (1 crédit)', style: TextStyle(fontWeight: FontWeight.w800)),
                               ),
                             );
-                            if (narrow) return Column(children: [field, const SizedBox(height: 14), button]);
+                            if (narrow) {
+                              return Column(children: [field, const SizedBox(height: 14), button]);
+                            }
                             return Row(children: [Expanded(child: field), const SizedBox(width: 16), button]);
                           }),
                         ],
                       ),
                     ),
                     const SizedBox(height: 40),
-                    const Text('Choisissez votre kit', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand)),
+                    const Text(
+                      'Choisissez votre kit',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand),
+                    ),
                     const SizedBox(height: 6),
-                    const Text('Chaque crédit génère un kit complet pour une activité.', style: TextStyle(color: K.mist)),
+                    const Text(
+                      'Chaque crédit génère un kit complet pour une activité.',
+                      style: TextStyle(color: K.mist),
+                    ),
                     const SizedBox(height: 20),
                     LayoutBuilder(builder: (context, c) {
                       final w = c.maxWidth < 640 ? c.maxWidth : (c.maxWidth - 20) / 2;
                       return Wrap(
-                        spacing: 20, runSpacing: 20,
+                        spacing: 20,
+                        runSpacing: 20,
                         children: [
-                          
-                          _buildProductCard(w, 'Le Livre Stratégique', 'Votre plan d\'action complet, rédigé pour votre secteur.', '1 crédit', '79 DH', 'f8a7dd07-d155-4b83-8289-286f2e44ee6b', 79),
-                          _buildProductCard(w, 'Les Prompts IA', 'Des prompts prêts à copier pour vos ventes et votre contenu.', '1 crédit', '49 DH', '8cbddad5-7747-424e-8ed1-a1829ae46914', 49),
-                          _buildProductCard(w, 'Le Sheet Automatisé', 'Un Google Sheet qui calcule vos ventes, stocks et marges à votre place.', '1 crédit', '59 DH', 'd4b7a69e-1720-4038-8da8-cf782fed24e9', 59),
-                          _buildProductCard(w, 'Le Pack Complet', 'Le livre, les prompts et le sheet automatisé : tout votre kit en une fois.', '3 crédits', '149 DH', '54e2150a-1648-4119-a4df-208bcb121c27', 149, featured: true),
+                          // ⚠️ REMPLACE CES IDs PAR TES VRAIS IDs SUPABASE
+                          _buildProductCard(w, 'Le Livre Stratégique', 'Votre plan d\'action complet, rédigé pour votre secteur.', '1 crédit', '79 DH', 'ID_DU_LIVRE', 79),
+                          _buildProductCard(w, 'Les Prompts IA', 'Des prompts prêts à copier pour vos ventes et votre contenu.', '1 crédit', '49 DH', 'ID_DES_PROMPTS', 49),
+                          _buildProductCard(w, 'Le Sheet Automatisé', 'Un Google Sheet qui calcule vos ventes, stocks et marges à votre place.', '1 crédit', '59 DH', 'ID_DU_SHEET', 59),
+                          _buildProductCard(w, 'Le Pack Complet', 'Le livre, les prompts et le sheet automatisé : tout votre kit en une fois.', '3 crédits', '149 DH', 'ID_PACK_COMPLET', 149, featured: true),
                         ],
                       );
                     }),
@@ -643,19 +843,43 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildProductCard(double width, String title, String description, String credits, String price, String id, double rawPrice, {bool featured = false}) {
+  Widget _buildProductCard(
+    double width,
+    String title,
+    String description,
+    String credits,
+    String price,
+    String id,
+    double rawPrice, {
+    bool featured = false,
+  }) {
     return Container(
-      width: width, padding: const EdgeInsets.all(22),
+      width: width,
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: featured ? K.deep : K.night.withOpacity(0.7),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: featured ? K.gold : K.gold.withOpacity(0.2), width: featured ? 2 : 1),
-        boxShadow: featured ? [BoxShadow(color: K.gold.withOpacity(0.18), blurRadius: 28, offset: const Offset(0, 8))] : null,
+        border: Border.all(
+          color: featured ? K.gold : K.gold.withOpacity(0.2),
+          width: featured ? 2 : 1,
+        ),
+        boxShadow: featured
+            ? [BoxShadow(color: K.gold.withOpacity(0.18), blurRadius: 28, offset: const Offset(0, 8))]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (featured) Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: K.gold, borderRadius: BorderRadius.circular(10)), child: const Text('Le plus choisi', style: TextStyle(color: K.night, fontWeight: FontWeight.w800, fontSize: 12))),
+          if (featured)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: K.gold, borderRadius: BorderRadius.circular(10)),
+              child: const Text(
+                'Le plus choisi',
+                style: TextStyle(color: K.night, fontWeight: FontWeight.w800, fontSize: 12),
+              ),
+            ),
           Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: K.sand)),
           const SizedBox(height: 8),
           Text(description, style: const TextStyle(color: K.mist, height: 1.45, fontSize: 14)),
@@ -664,10 +888,17 @@ class _DashboardPageState extends State<DashboardPage> {
           Text(credits, style: const TextStyle(color: K.mist, fontSize: 13)),
           const SizedBox(height: 18),
           SizedBox(
-            width: double.infinity, height: 48,
+            width: double.infinity,
+            height: 48,
             child: ElevatedButton(
               onPressed: () => _buyProduct(id, rawPrice),
-              style: ElevatedButton.styleFrom(backgroundColor: featured ? K.gold : Colors.transparent, foregroundColor: featured ? K.night : K.gold, elevation: 0, side: featured ? null : const BorderSide(color: K.gold), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: featured ? K.gold : Colors.transparent,
+                foregroundColor: featured ? K.night : K.gold,
+                elevation: 0,
+                side: featured ? null : const BorderSide(color: K.gold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
               child: const Text('Acheter', style: TextStyle(fontWeight: FontWeight.w800)),
             ),
           ),
