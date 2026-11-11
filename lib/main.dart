@@ -824,11 +824,11 @@ class _DashboardPageState extends State<DashboardPage> {
                         spacing: 20,
                         runSpacing: 20,
                         children: [
-                          // ⚠️ REMPLACE CES IDs PAR TES VRAIS IDs SUPABASE
-                          _buildProductCard(w, 'Le Livre Stratégique', 'Votre plan d\'action complet, rédigé pour votre secteur.', '1 crédit', '79 DH', 'ID_DU_LIVRE', 79),
-                          _buildProductCard(w, 'Les Prompts IA', 'Des prompts prêts à copier pour vos ventes et votre contenu.', '1 crédit', '49 DH', 'ID_DES_PROMPTS', 49),
-                          _buildProductCard(w, 'Le Sheet Automatisé', 'Un Google Sheet qui calcule vos ventes, stocks et marges à votre place.', '1 crédit', '59 DH', 'ID_DU_SHEET', 59),
-                          _buildProductCard(w, 'Le Pack Complet', 'Le livre, les prompts et le sheet automatisé : tout votre kit en une fois.', '3 crédits', '149 DH', 'ID_PACK_COMPLET', 149, featured: true),
+                          
+                          _buildProductCard(w, 'Le Livre Stratégique', 'Votre plan d\'action complet, rédigé pour votre secteur.', '1 crédit', '79 DH', 'f8a7dd07-d155-4b83-8289-286f2e44ee6b', 79),
+                          _buildProductCard(w, 'Les Prompts IA', 'Des prompts prêts à copier pour vos ventes et votre contenu.', '1 crédit', '49 DH', '8cbddad5-7747-424e-8ed1-a1829ae46914', 49),
+                          _buildProductCard(w, 'Le Sheet Automatisé', 'Un Google Sheet qui calcule vos ventes, stocks et marges à votre place.', '1 crédit', '59 DH', 'd4b7a69e-1720-4038-8da8-cf782fed24e9', 59),
+                          _buildProductCard(w, 'Le Pack Complet', 'Le livre, les prompts et le sheet automatisé : tout votre kit en une fois.', '3 crédits', '149 DH', '54e2150a-1648-4119-a4df-208bcb121c27', 149, featured: true),
                         ],
                       );
                     }),
