@@ -11,8 +11,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { secteurClient, emailClient } = await req.json()
+    const { secteurClient, emailClient, typeProduit } = await req.json()
     
+    // 1. VÉRIFICATION DES CRÉDITS
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -22,94 +23,93 @@ serve(async (req) => {
     if (!user) throw new Error("Veuillez vous connecter.")
 
     const { data: profile } = await supabaseClient.from('profiles').select('credits').eq('id', user.id).single()
-    if (!profile || profile.credits < 1) throw new Error("Crédits insuffisants.")
+    
+    // Combien de crédits faut-il pour ce type ?
+    const creditsNeeded = typeProduit === 'pack' ? 3 : 1;
+    if (!profile || profile.credits < creditsNeeded) throw new Error("Crédits insuffisants.")
 
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY')
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
     const googleCredsRaw = Deno.env.get('GOOGLE_WORKSPACE_CREDENTIALS')
 
-    const [deepseekRes, geminiRes] = await Promise.all([
-      fetch("https://api.deepseek.com/chat/completions", {
+    let livre = "";
+    let prompts = "";
+    let sheetUrl = "";
+    let sheetData = null;
+
+    // --- APPEL 1 : DEEPSEEK (Le Livre) ---
+    if (typeProduit === 'livre' || typeProduit === 'pack') {
+      const dsRes = await fetch("https://api.deepseek.com/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + deepseekApiKey },
         body: JSON.stringify({
           model: "deepseek-chat",
           max_tokens: 4000,
-          messages: [{ 
-            role: "user", 
-            content: "Tu es un consultant McKinsey. Rédige un guide de 4000 mots pour : " + secteurClient + ". Structure avec 5 chapitres. Utilise du HTML pur (<h1>, <h2>, <p>, <ul>)." 
-          }],
+          messages: [{ role: "user", content: "Tu es un consultant McKinsey. Rédige un guide de 4000 mots pour : " + secteurClient + ". Utilise du HTML (<h1>, <h2>, <p>)." }],
         })
-      }),
-      fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + geminiApiKey, {
+      })
+      const dsData = await dsRes.json()
+      if(dsData.choices) livre = dsData.choices[0].message.content;
+    }
+
+    // --- APPEL 2 : GEMINI (Prompts et/ou Sheet) ---
+    if (typeProduit === 'prompt' || typeProduit === 'sheet' || typeProduit === 'pack') {
+      const promptDemande = typeProduit === 'prompt' ? "un tableau 'prompts' (15 prompts HTML)" : 
+                            (typeProduit === 'sheet' ? "un tableau 'sheetData' (données financières)" : 
+                            "un JSON avec 'prompts' (HTML) et 'sheetData'");
+
+      const gRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + geminiApiKey, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: "Pour " + secteurClient + ", génère un JSON strict : { 'prompts': 'un long texte HTML avec 15 prompts ultra-détaillés', 'sheetData': [['Catégorie', 'Description', 'Montant'], ['Revenu', 'Ventes', '=SUM(C3:C10)'], ['Dépense', 'Achats', '5000'], ['BÉNÉFICE', '', '=C2-C3']] }" }] }],
+          contents: [{ parts: [{ text: "Pour " + secteurClient + ", génère " + promptDemande + ". Ne renvoie que le JSON." }] }],
           generationConfig: { responseMimeType: "application/json" }
         })
       })
-    ])
+      const gData = await gRes.json()
+      if(gData.candidates) {
+        const parsed = JSON.parse(gData.candidates[0].content.parts[0].text);
+        if(parsed.prompts) prompts = parsed.prompts;
+        if(parsed.sheetData) sheetData = parsed.sheetData;
+      }
+    }
 
-    const deepseekData = await deepseekRes.json()
-    const geminiData = await geminiRes.json()
-    
-    const livreHtml = deepseekData.choices[0].message.content
-    const kitData = JSON.parse(geminiData.candidates[0].content.parts[0].text)
+    // --- APPEL 3 : GOOGLE SHEETS ---
+    if ((typeProduit === 'sheet' || typeProduit === 'pack') && sheetData) {
+      const creds = JSON.parse(googleCredsRaw)
+      const privateKey = await crypto.subtle.importKey("pkcs8", pemToArrayBuffer(creds.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"])
+      const jwt = await create({ alg: "RS256", typ: "JWT" }, { iss: creds.client_email, scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file", aud: creds.token_uri, exp: getNumericDate(3600) }, privateKey)
+      const tokenRes = await fetch(creds.token_uri, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }) })
+      const { access_token } = await tokenRes.json()
 
-    // Google Sheets
-    const creds = JSON.parse(googleCredsRaw)
-    const privateKey = await crypto.subtle.importKey("pkcs8", pemToArrayBuffer(creds.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"])
-    const jwt = await create({ alg: "RS256", typ: "JWT" }, { iss: creds.client_email, scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file", aud: creds.token_uri, exp: getNumericDate(3600) }, privateKey)
-    const tokenRes = await fetch(creds.token_uri, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }) })
-    const { access_token } = await tokenRes.json()
+      const createSheetRes = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+        method: "POST", headers: { "Authorization": "Bearer " + access_token, "Content-Type": "application/json" },
+        body: JSON.stringify({ properties: { title: "Business - " + secteurClient } })
+      })
+      const sheet = await createSheetRes.json()
+      
+      if (sheet.spreadsheetId) {
+        await fetch("https://sheets.googleapis.com/v4/spreadsheets/" + sheet.spreadsheetId + "/values/A1?valueInputOption=USER_ENTERED", {
+          method: "PUT", headers: { "Authorization": "Bearer " + access_token, "Content-Type": "application/json" },
+          body: JSON.stringify({ values: sheetData })
+        })
+        
+        // 👇 La correction est ici : on utilise bien les backticks
+        sheetUrl = "https://docs.google.com/spreadsheets/d/" + sheet.spreadsheetId + "/edit";
+      }
+    }
 
-    const createSheetRes = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + access_token, "Content-Type": "application/json" },
-      body: JSON.stringify({ properties: { title: "Business - " + secteurClient } })
-    })
-    const sheetId = (await createSheetRes.json()).spreadsheetId
-    await fetch("https://sheets.googleapis.com/v4/spreadsheets/" + sheetId + "/values/A1?valueInputOption=USER_ENTERED", {
-      method: "PUT", headers: { "Authorization": "Bearer " + access_token, "Content-Type": "application/json" },
-      body: JSON.stringify({ values: kitData.sheetData })
-    })
-    await fetch("https://www.googleapis.com/drive/v3/files/" + sheetId + "/permissions", {
-      method: "POST", headers: { "Authorization": "Bearer " + access_token, "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "reader", type: "anyone" })
-    })
-    const sheetUrl = "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit"
-
-    // Sauvegarde en Base de Données
-    const { data: newKit, error: dbError } = await supabaseClient.from('kits').insert({
-      user_id: user.id,
-      secteur_client: secteurClient,
-      livre_html: livreHtml,
-      prompts_html: kitData.prompts,
-      sheet_url: sheetUrl
+    // --- SAUVEGARDE EN BASE ---
+    const { data: newKit } = await supabaseClient.from('kits').insert({
+      user_id: user.id, secteur_client: secteurClient, livre_html: livre, prompts_html: prompts, sheet_url: sheetUrl
     }).select().single()
 
-    if (dbError) throw dbError;
+    // --- DEDUIRE LES CREDITS ---
+    await supabaseClient.from('profiles').update({ credits: profile.credits - creditsNeeded }).eq('id', user.id)
 
-    // Envoi de l'email
-    const kitId = newKit.id;
-    const baseUrl = "https://ynephuutnazdnjhsdlsy.supabase.co/functions/v1/view-kit";
-    
-    const emailHtml = "<div style='font-family: Arial; text-align: center; padding: 40px; background: #f4f4f5;'>" +
-      "<h1 style='color: #111;'>🎉 Votre Kit Business est prêt</h1>" +
-      "<p>Secteur : <strong>" + secteurClient + "</strong></p>" +
-      "<div style='margin-top: 40px;'>" +
-      "<a href='" + baseUrl + "?id=" + kitId + "&type=livre' style='display: inline-block; background: #22C55E; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px;'>📘 Lire le Livre (PDF)</a>" +
-      "<a href='" + baseUrl + "?id=" + kitId + "&type=prompts' style='display: inline-block; background: #111; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px;'>🤖 Lire les Prompts (PDF)</a>" +
-      "</div>" +
-      "<p style='margin-top: 40px;'><a href='" + sheetUrl + "' style='color: #22C55E;'>Accéder à mon Tableau Financier</a></p>" +
-      "</div>";
-    
-
-    // Déduire le crédit
-    await supabaseClient.from('profiles').update({ credits: profile.credits - 1 }).eq('id', user.id)
-
-    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
+    return new Response(JSON.stringify({ success: true, livre, prompt: prompts, sheetUrl }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200,
+    })
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 })

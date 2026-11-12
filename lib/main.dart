@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -473,6 +474,7 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
+String _typeSelectionne = 'livre'; // 'livre', 'prompt', 'sheet', 'pack'
 class _DashboardPageState extends State<DashboardPage> {
   int _credits = 0;
   final _secteurCtrl = TextEditingController();
@@ -549,99 +551,106 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // --- GÉNÉRATION SANS EMAIL (AFFICHAGE DIRECT) ---
-  Future<void> _generate() async {
-    if (_secteurCtrl.text.trim().length < 3) {
-      _toast('Décrivez votre activité en quelques mots.', K.clay);
-      return;
-    }
-    if (_credits < 1) {
-      _toast('Il vous faut au moins 1 crédit. Choisissez un kit ci-dessous.', K.clay);
-      return;
-    }
+ Future<void> _generate() async {
+  if (_secteurCtrl.text.trim().length < 3) { _toast('Décrivez votre activité.', K.clay); return; }
+  
+  int cout = _typeSelectionne == 'pack' ? 3 : 1;
+  if (_credits < cout) { _toast('Il vous faut $cout crédit(s).', K.clay); return; }
+  
+  setState(() => _isGenerating = true);
+  try {
+    final res = await Supabase.instance.client.functions.invoke('generate-kit', body: {
+      'secteurClient': _secteurCtrl.text.trim(),
+      'emailClient': Supabase.instance.client.auth.currentUser!.email,
+      'typeProduit': _typeSelectionne, // <-- On envoie le choix
+    });
     
-    setState(() => _isGenerating = true);
-    try {
-      final res = await Supabase.instance.client.functions.invoke('generate-kit', body: {
-        'secteurClient': _secteurCtrl.text.trim(),
-        'emailClient': Supabase.instance.client.auth.currentUser!.email,
-      });
-      
-      if (res.status == 200) {
-        await _fetchCredits();
-        if (!mounted) return;
-        _secteurCtrl.clear();
-        
-        // On affiche le résultat dans une popup
-        _showResultDialog(
-          res.data['livre'] ?? "Aucun livre généré.", 
-          res.data['prompt'] ?? "Aucun prompt généré.", 
-          res.data['sheetUrl'] ?? ""
-        );
-      } else {
-        throw Exception(res.data['error']);
-      }
-    } catch (e) {
+    if (res.status == 200) {
+      await _fetchCredits();
       if (!mounted) return;
-      _toast('Génération impossible. Vos crédits n\'ont pas été touchés.', Colors.red.shade700);
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
+      _secteurCtrl.clear();
+      _showResultDialog(res.data['livre'] ?? "", res.data['prompt'] ?? "", res.data['sheetUrl'] ?? "");
+    } else {
+      throw Exception(res.data['error']);
     }
+  } catch (e) {
+    if (!mounted) return;
+    _toast('Génération impossible.', Colors.red.shade700);
+  } finally {
+    if (mounted) setState(() => _isGenerating = false);
   }
+}
 
-  // --- FENÊTRE DE RÉSULTAT ---
-  void _showResultDialog(String livre, String prompts, String sheetUrl) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: K.night,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          width: 700, height: 600, padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(border: Border.all(color: K.gold.withOpacity(0.3)), borderRadius: BorderRadius.circular(20)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('✨ Votre Kit est prêt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: K.sand)),
-                  IconButton(icon: const Icon(Icons.close, color: K.mist), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              const Divider(color: K.mist),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+void _showResultDialog(String livre, String prompts, String sheetUrl) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: K.night,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: 700, height: 600, padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(border: Border.all(color: K.gold.withOpacity(0.3)), borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            
+            // --- TITRE DE LA POPUP ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+              children: [
+                const Text('✨ Votre Kit est prêt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: K.sand)), 
+                IconButton(icon: const Icon(Icons.close, color: K.mist), onPressed: () => Navigator.pop(context))
+              ]
+            ),
+            const Divider(color: K.mist),
+            
+            // --- CONTENU DÉFILABLE ---
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    
+                    // 1. Le Livre
+                    if (livre.isNotEmpty) ...[
                       const Text('📘 Livre Stratégique', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: K.gold)),
                       const SizedBox(height: 8),
-                      Text(livre, style: const TextStyle(color: K.sand, height: 1.5)),
+                      HtmlWidget(livre, textStyle: const TextStyle(color: K.sand, height: 1.5)),
                       const SizedBox(height: 24),
+                    ],
+                    
+                    // 2. Les Prompts
+                    if (prompts.isNotEmpty) ...[
                       const Text('🤖 Prompts IA', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: K.gold)),
                       const SizedBox(height: 8),
-                      Text(prompts, style: const TextStyle(color: K.sand, height: 1.5)),
+                      HtmlWidget(prompts, textStyle: const TextStyle(color: K.sand, height: 1.5)),
                     ],
-                  ),
+                    
+                  ], // Fin du children de la Column interne
+                ), // Fin de la Column interne
+              ), // Fin du SingleChildScrollView
+            ), // Fin du Expanded
+            
+            const SizedBox(height: 20),
+            
+            // --- BOUTON GOOGLE SHEET ---
+            if (sheetUrl.isNotEmpty && !sheetUrl.contains('undefined'))
+              SizedBox(
+                width: double.infinity, height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () => launchUrl(Uri.parse(sheetUrl), mode: LaunchMode.externalApplication),
+                  icon: const Icon(Icons.table_chart, color: K.night), 
+                  label: const Text('Ouvrir mon Google Sheet', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(backgroundColor: K.gold, foregroundColor: K.night, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 ),
-              ),
-              const SizedBox(height: 20),
-              if (sheetUrl.isNotEmpty)
-                SizedBox(
-                  width: double.infinity, height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse(sheetUrl), mode: LaunchMode.externalApplication),
-                    icon: const Icon(Icons.table_chart, color: K.night),
-                    label: const Text('Ouvrir mon Google Sheet', style: TextStyle(fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(backgroundColor: K.gold, foregroundColor: K.night, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  ),
-                )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+              )
+              
+          ], // Fin du children de la Column principale
+        ), // Fin de la Column principale
+      ), // Fin du Container
+    ), // Fin du Dialog
+  ); // Fin du showDialog
+} // Fin de la fonction
 
   // --- FENÊTRE HISTORIQUE ---
   void _showHistoriqueDialog() {
@@ -759,6 +768,28 @@ class _DashboardPageState extends State<DashboardPage> {
                             style: TextStyle(color: K.mist, height: 1.5),
                           ),
                           const SizedBox(height: 20),
+
+                          const SizedBox(height: 20),
+
+// 👇 ÉTAPE 1 : LE MENU DÉROULANT
+DropdownButtonFormField<String>(
+  value: _typeSelectionne,
+  dropdownColor: K.night,
+  style: const TextStyle(color: K.sand),
+  decoration: InputDecoration(
+    filled: true, fillColor: K.deep.withOpacity(0.6),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+  ),
+  items: const [
+    DropdownMenuItem(value: 'livre', child: Text('📘 Le Livre Stratégique (1 crédit)')),
+    DropdownMenuItem(value: 'prompt', child: Text('🤖 Les Prompts IA (1 crédit)')),
+    DropdownMenuItem(value: 'sheet', child: Text('📊 Le Google Sheet (1 crédit)')),
+    DropdownMenuItem(value: 'pack', child: Text('💎 Le Pack Complet (3 crédits)')),
+  ],
+  onChanged: (val) => setState(() => _typeSelectionne = val!),
+),
+const SizedBox(height: 16),
+
                           LayoutBuilder(builder: (context, c) {
                             final narrow = c.maxWidth < 520;
                             final field = TextField(
