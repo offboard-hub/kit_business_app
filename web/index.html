@@ -42,6 +42,12 @@
     window.addEventListener('flutter-first-frame', function () {
       document.getElementById('splash-screen').style.display = 'none';
     });
+
+    /* Cacher le badge Netlify */
+#netlify-badge, 
+iframe[title="Netlify Drawer"] { 
+  display: none !important; 
+}
   </script>
   
 </body>
