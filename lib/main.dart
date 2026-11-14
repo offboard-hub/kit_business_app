@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart'; // Pour le presse-papiers (Clipboard)
+import 'package:printing/printing.dart'; // Pour la génération du PDF
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -172,7 +174,7 @@ class _LandingPageState extends State<LandingPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 16),
-                    const Icon(Icons.wb_twilight_rounded, color: K.gold, size: 34),
+                    const AppLogo(size: 70),
                     const SizedBox(height: 16),
                     const Text(
                       'Votre business mérite\nun vrai plan.',
@@ -396,7 +398,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.lock_person_rounded, size: 46, color: K.gold),
+                    const AppLogo(size: 85),
                     const SizedBox(height: 18),
                     const Text(
                       'Accédez à votre espace',
@@ -549,7 +551,7 @@ class _DashboardPageState extends State<DashboardPage> {
       _toast('Paiement impossible. Réessayez dans un instant.', Colors.red.shade700);
     }
   }
-
+ 
   // --- GÉNÉRATION SANS EMAIL (AFFICHAGE DIRECT) ---
  Future<void> _generate() async {
   if (_secteurCtrl.text.trim().length < 3) { _toast('Décrivez votre activité.', K.clay); return; }
@@ -588,30 +590,73 @@ void _showResultDialog(String livre, String prompts, String sheetUrl) {
       backgroundColor: K.night,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        width: 700, height: 600, padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(border: Border.all(color: K.gold.withOpacity(0.3)), borderRadius: BorderRadius.circular(20)),
+        width: 700, 
+        height: 600, 
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          border: Border.all(color: K.gold.withOpacity(0.3)), 
+          borderRadius: BorderRadius.circular(20)
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             
-            // --- TITRE DE LA POPUP ---
+            // --- TITRE ET BOUTONS DU HAUT (PDF / COPIER / FERMER) ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween, 
               children: [
-                const Text('✨ Votre Kit est prêt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: K.sand)), 
-                IconButton(icon: const Icon(Icons.close, color: K.mist), onPressed: () => Navigator.pop(context))
+                const Text(
+                  '✨ Votre Kit est prêt', 
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: K.sand)
+                ),
+                
+                Row(
+                  children: [
+                    // Bouton Copier
+                    IconButton(
+                      icon: const Icon(Icons.copy, color: K.mist),
+                      tooltip: "Copier le texte",
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: livre));
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Texte copié !')));
+                      },
+                    ),
+                    
+                    // Bouton PDF
+                    IconButton(
+                      icon: const Icon(Icons.picture_as_pdf, color: K.gold),
+                      tooltip: "Télécharger en PDF",
+                      onPressed: () async {
+                        if (livre.isEmpty) return;
+                        await Printing.layoutPdf(
+                          onLayout: (format) => Printing.convertHtml(
+                            format: format,
+                            html: livre,
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    // Bouton Fermer
+                    IconButton(
+                      icon: const Icon(Icons.close, color: K.mist), 
+                      onPressed: () => Navigator.pop(context)
+                    )
+                  ],
+                )
               ]
             ),
+            
             const Divider(color: K.mist),
             
-            // --- CONTENU DÉFILABLE ---
+            // --- CONTENU DU KIT (LIVRE ET PROMPTS) ---
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     
-                    // 1. Le Livre
+                    // Le Livre
                     if (livre.isNotEmpty) ...[
                       const Text('📘 Livre Stratégique', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: K.gold)),
                       const SizedBox(height: 8),
@@ -619,38 +664,30 @@ void _showResultDialog(String livre, String prompts, String sheetUrl) {
                       const SizedBox(height: 24),
                     ],
                     
-                    // 2. Les Prompts
+                    // Les Prompts
                     if (prompts.isNotEmpty) ...[
                       const Text('🤖 Prompts IA', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: K.gold)),
                       const SizedBox(height: 8),
                       HtmlWidget(prompts, textStyle: const TextStyle(color: K.sand, height: 1.5)),
                     ],
                     
-                  ], // Fin du children de la Column interne
-                ), // Fin de la Column interne
-              ), // Fin du SingleChildScrollView
-            ), // Fin du Expanded
+                  ],
+                ),
+              ),
+            ),
             
+            // --- BOUTON GOOGLE SHEET (TOUT EN BAS) ---
             const SizedBox(height: 20),
             
-            // --- BOUTON GOOGLE SHEET ---
             if (sheetUrl.isNotEmpty && !sheetUrl.contains('undefined'))
-              SizedBox(
-                width: double.infinity, height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse(sheetUrl), mode: LaunchMode.externalApplication),
-                  icon: const Icon(Icons.table_chart, color: K.night), 
-                  label: const Text('Ouvrir mon Google Sheet', style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(backgroundColor: K.gold, foregroundColor: K.night, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                ),
-              )
-              
+              BoutonOuvrirSheet(sheetUrl: sheetUrl),
+
           ], // Fin du children de la Column principale
-        ), // Fin de la Column principale
+        ), // Fin de la Column
       ), // Fin du Container
     ), // Fin du Dialog
   ); // Fin du showDialog
-} // Fin de la fonction
+}
 
   // --- FENÊTRE HISTORIQUE ---
   void _showHistoriqueDialog() {
@@ -934,6 +971,131 @@ const SizedBox(height: 16),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ==========================================
+// LE LOGO KIT BUSINESS
+// ==========================================
+class AppLogo extends StatelessWidget {
+  final double size;
+  const AppLogo({super.key, this.size = 60});
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(size * 0.28);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [K.goldSoft, K.gold, K.clay],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: K.gold.withOpacity(0.45),
+            blurRadius: size * 0.45,
+            spreadRadius: -size * 0.05,
+            offset: Offset(0, size * 0.12),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: size * 0.2,
+            offset: Offset(0, size * 0.06),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: size * 0.5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withOpacity(0.35),
+                      Colors.white.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: size * 0.02,
+                  ),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.rocket_launch_rounded,
+              color: K.night,
+              size: size * 0.52,
+              shadows: [
+                Shadow(
+                  color: Colors.white.withOpacity(0.35),
+                  blurRadius: size * 0.08,
+                  offset: Offset(0, size * 0.02),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+// ==========================================
+// WIDGET RÉUTILISABLE : BOUTON GOOGLE SHEET
+// ==========================================
+class BoutonOuvrirSheet extends StatelessWidget {
+  final String sheetUrl;
+
+  const BoutonOuvrirSheet({super.key, required this.sheetUrl});
+
+  Future<void> _ouvrirGoogleSheet() async {
+    final Uri uri = Uri.parse(sheetUrl);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Impossible d’ouvrir le lien $sheetUrl');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton.icon(
+        onPressed: _ouvrirGoogleSheet,
+        icon: const Icon(Icons.table_chart, color: K.night),
+        label: const Text(
+          "Ouvrir mon Google Sheet",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: K.gold,
+          foregroundColor: K.night,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
     );
   }
