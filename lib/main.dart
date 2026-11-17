@@ -476,6 +476,9 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
+String _dernierProduitAchete = 'livre'; // Le produit simple acheté
+bool _isPack = false; // Est-ce que le dernier achat est un pack ?
+final _problemeCtrl = TextEditingController();
 String _typeSelectionne = 'livre'; // 'livre', 'prompt', 'sheet', 'pack'
 class _DashboardPageState extends State<DashboardPage> {
   int _credits = 0;
@@ -492,6 +495,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void dispose() {
     _secteurCtrl.dispose();
+    _problemeCtrl.dispose();
     super.dispose();
   }
 
@@ -532,52 +536,72 @@ class _DashboardPageState extends State<DashboardPage> {
     } catch (_) {}
   }
 
-  Future<void> _buyProduct(String productId, double price) async {
-    _toast('Paiement en cours…', K.deep);
-    try {
-      final res = await Supabase.instance.client.functions.invoke('verify-payment', body: {
-        'productId': productId,
-        'transactionId': 'TEST_TX_${DateTime.now().millisecondsSinceEpoch}',
-        'provider': 'test_mode',
-        'amountPaid': price,
-      });
-      if (res.status == 200) {
-        await _fetchCredits();
-        if (!mounted) return;
-        _toast('Paiement validé. Vos crédits sont ajoutés.', const Color(0xFF2E7D5B));
-      }
-    } catch (e) {
+ Future<void> _buyProduct(String productId, double price, String typeProduit) async {
+  _toast('Paiement en cours…', K.deep);
+  try {
+    final res = await Supabase.instance.client.functions.invoke('verify-payment', body: {
+      'productId': productId, 'transactionId': 'TEST_TX_${DateTime.now().millisecondsSinceEpoch}', 'provider': 'test_mode', 'amountPaid': price,
+    });
+    if (res.status == 200) {
+      await _fetchCredits();
       if (!mounted) return;
-      _toast('Paiement impossible. Réessayez dans un instant.', Colors.red.shade700);
+      
+      // 👇 On mémorise le type d'achat
+      setState(() {
+        _isPack = (typeProduit == 'pack');
+        if (!_isPack) _dernierProduitAchete = typeProduit;
+      });
+
+      _toast('Paiement validé !', const Color(0xFF2E7D5B));
     }
+  } catch (e) {
+    if (!mounted) return;
+    _toast('Paiement impossible.', Colors.red.shade700);
   }
- 
+}
+
   // --- GÉNÉRATION SANS EMAIL (AFFICHAGE DIRECT) ---
- Future<void> _generate() async {
-  if (_secteurCtrl.text.trim().length < 3) { _toast('Décrivez votre activité.', K.clay); return; }
+Future<void> _generate() async {
+  if (_secteurCtrl.text.trim().length < 3) { 
+    _toast('Décrivez votre activité.', K.clay); 
+    return; 
+  }
   
-  int cout = _typeSelectionne == 'pack' ? 3 : 1;
-  if (_credits < cout) { _toast('Il vous faut $cout crédit(s).', K.clay); return; }
+  // Le type dépend de ce qui a été acheté
+  final typeToGenerate = _isPack ? _typeSelectionne : _dernierProduitAchete;
+  
+  int cout = typeToGenerate == 'pack' ? 3 : 1;
+  if (_credits < cout) { 
+    _toast('Il vous faut $cout crédit(s).', K.clay); 
+    return; 
+  }
   
   setState(() => _isGenerating = true);
+  
   try {
+    // 👇 C'EST ICI QU'ON ENVOIE TOUT À SUPABASE
     final res = await Supabase.instance.client.functions.invoke('generate-kit', body: {
       'secteurClient': _secteurCtrl.text.trim(),
+      'problemeClient': _problemeCtrl.text.trim(), // 👈 Le nouveau champ
       'emailClient': Supabase.instance.client.auth.currentUser!.email,
-      'typeProduit': _typeSelectionne, // <-- On envoie le choix
+      'typeProduit': typeToGenerate,
     });
     
     if (res.status == 200) {
       await _fetchCredits();
       if (!mounted) return;
+      
+      // On vide les champs une fois que c'est fini
       _secteurCtrl.clear();
+      _problemeCtrl.clear();
+      
       _showResultDialog(res.data['livre'] ?? "", res.data['prompt'] ?? "", res.data['sheetUrl'] ?? "");
     } else {
       throw Exception(res.data['error']);
     }
   } catch (e) {
     if (!mounted) return;
-    _toast('Génération impossible.', Colors.red.shade700);
+    _toast('Génération impossible. Réessayez.', Colors.red.shade700);
   } finally {
     if (mounted) setState(() => _isGenerating = false);
   }
@@ -627,14 +651,19 @@ void _showResultDialog(String livre, String prompts, String sheetUrl) {
                       icon: const Icon(Icons.picture_as_pdf, color: K.gold),
                       tooltip: "Télécharger en PDF",
                       onPressed: () async {
-                        if (livre.isEmpty) return;
-                        await Printing.layoutPdf(
-                          onLayout: (format) => Printing.convertHtml(
-                            format: format,
-                            html: livre,
-                          ),
-                        );
-                      },
+  if (livre.isEmpty) return;
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Génération du PDF en cours...')));
+  try {
+    await Printing.layoutPdf(
+      onLayout: (format) => Printing.convertHtml(
+        format: format,
+        html: livre,
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur PDF: $e')));
+  }
+},
                     ),
                     
                     // Bouton Fermer
@@ -735,181 +764,195 @@ void _showResultDialog(String livre, String prompts, String sheetUrl) {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: PatternBackground(
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(22),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: PatternBackground(
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- HEADER ---
+                  Row(
+  children: [
+    const Expanded(
+      child: Text(
+        'Mon espace',
+        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: K.sand),
+      ),
+    ),
+    // 👇 LE BOUTON HISTORIQUE EST DE RETOUR
+    IconButton(
+      tooltip: 'Mes Kits',
+      icon: const Icon(Icons.folder_open_rounded, color: K.gold),
+      onPressed: () {
+        _fetchHistorique();
+        _showHistoriqueDialog();
+      },
+    ),
+    Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: K.gold,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$_credits crédit${_credits > 1 ? 's' : ''}',
+        style: const TextStyle(fontWeight: FontWeight.w800, color: K.night),
+      ),
+    ),
+    IconButton(
+      tooltip: 'Se déconnecter',
+      icon: const Icon(Icons.logout_rounded, color: K.mist),
+      onPressed: () => Supabase.instance.client.auth.signOut(),
+    ),
+  ],
+),
+                  const SizedBox(height: 28),
+
+                  // --- GÉNÉRATEUR ---
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: K.night.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: K.gold.withOpacity(0.35)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Expanded(
-                          child: Text(
-                            'Mon espace',
-                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: K.sand),
+                        const Text(
+                          'Générez votre kit',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Décrivez votre activité. Votre livre, vos prompts et votre sheet apparaîtront instantanément.',
+                          style: TextStyle(color: K.mist, height: 1.5),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        // Menu déroulant (seulement si Pack)
+                        if (_isPack) ...[
+                          DropdownButtonFormField<String>(
+                            value: _typeSelectionne,
+                            dropdownColor: K.night,
+                            style: const TextStyle(color: K.sand),
+                            decoration: InputDecoration(
+                              filled: true, fillColor: K.deep.withOpacity(0.6),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'livre', child: Text('📘 Le Livre Stratégique')),
+                              DropdownMenuItem(value: 'prompt', child: Text('🤖 Les Prompts IA')),
+                              DropdownMenuItem(value: 'sheet', child: Text('📊 Le Google Sheet')),
+                              DropdownMenuItem(value: 'pack', child: Text('💎 Le Pack Complet')),
+                            ],
+                            onChanged: (val) => setState(() => _typeSelectionne = val!),
+                          ),
+                          const SizedBox(height: 16),
+                        ] else ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: K.deep.withOpacity(0.6), borderRadius: BorderRadius.circular(14)),
+                            child: Text('Produit à générer : ${_dernierProduitAchete.toUpperCase()}', style: const TextStyle(color: K.gold, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Champ Secteur
+                        TextField(
+                          controller: _secteurCtrl,
+                          style: const TextStyle(color: K.sand),
+                          decoration: InputDecoration(
+                            hintText: 'Ex : boulangerie à Bamako',
+                            hintStyle: TextStyle(color: K.mist.withOpacity(0.6)),
+                            filled: true,
+                            fillColor: K.deep.withOpacity(0.6),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: K.gold, width: 1.5)),
                           ),
                         ),
-                        // Bouton Historique
-                        IconButton(
-                          tooltip: 'Mes Kits',
-                          icon: const Icon(Icons.folder_open_rounded, color: K.gold),
-                          onPressed: () {
-                            _fetchHistorique();
-                            _showHistoriqueDialog();
-                          },
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: K.gold,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '$_credits crédit${_credits > 1 ? 's' : ''}',
-                            style: const TextStyle(fontWeight: FontWeight.w800, color: K.night),
+                        const SizedBox(height: 12),
+
+                        // Champ Problème
+                        TextField(
+                          controller: _problemeCtrl,
+                          maxLines: 2,
+                          style: const TextStyle(color: K.sand),
+                          decoration: InputDecoration(
+                            hintText: 'Quel est votre défi actuel ? (ex: Je ne trouve pas de clients)',
+                            hintStyle: TextStyle(color: K.mist.withOpacity(0.6)),
+                            filled: true,
+                            fillColor: K.deep.withOpacity(0.6),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: K.gold, width: 1.5)),
                           ),
                         ),
-                        IconButton(
-                          tooltip: 'Se déconnecter',
-                          icon: const Icon(Icons.logout_rounded, color: K.mist),
-                          onPressed: () => Supabase.instance.client.auth.signOut(),
+                        const SizedBox(height: 16),
+
+                        // Bouton Générer
+                        SizedBox(
+                          height: 54,
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isGenerating ? null : _generate,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: K.gold,
+                              foregroundColor: K.night,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: _isGenerating
+                                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: K.night, strokeWidth: 2.5))
+                                : const Text('Générer mon Kit', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: K.night.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: K.gold.withOpacity(0.35)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Générez votre kit',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Décrivez votre activité. Votre livre, vos prompts et votre sheet apparaîtront instantanément.',
-                            style: TextStyle(color: K.mist, height: 1.5),
-                          ),
-                          const SizedBox(height: 20),
+                  ),
+                  const SizedBox(height: 40),
 
-                          const SizedBox(height: 20),
-
-// 👇 ÉTAPE 1 : LE MENU DÉROULANT
-DropdownButtonFormField<String>(
-  value: _typeSelectionne,
-  dropdownColor: K.night,
-  style: const TextStyle(color: K.sand),
-  decoration: InputDecoration(
-    filled: true, fillColor: K.deep.withOpacity(0.6),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-  ),
-  items: const [
-    DropdownMenuItem(value: 'livre', child: Text('📘 Le Livre Stratégique (1 crédit)')),
-    DropdownMenuItem(value: 'prompt', child: Text('🤖 Les Prompts IA (1 crédit)')),
-    DropdownMenuItem(value: 'sheet', child: Text('📊 Le Google Sheet (1 crédit)')),
-    DropdownMenuItem(value: 'pack', child: Text('💎 Le Pack Complet (3 crédits)')),
-  ],
-  onChanged: (val) => setState(() => _typeSelectionne = val!),
-),
-const SizedBox(height: 16),
-
-                          LayoutBuilder(builder: (context, c) {
-                            final narrow = c.maxWidth < 520;
-                            final field = TextField(
-                              controller: _secteurCtrl,
-                              style: const TextStyle(color: K.sand),
-                              decoration: InputDecoration(
-                                hintText: 'Ex : boulangerie à Bamako',
-                                hintStyle: TextStyle(color: K.mist.withOpacity(0.6)),
-                                filled: true,
-                                fillColor: K.deep.withOpacity(0.6),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide.none,
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: const BorderSide(color: K.gold, width: 1.5),
-                                ),
-                              ),
-                            );
-                            final button = SizedBox(
-                              height: 54,
-                              width: narrow ? double.infinity : null,
-                              child: ElevatedButton(
-                                onPressed: _isGenerating ? null : _generate,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: K.gold,
-                                  foregroundColor: K.night,
-                                  padding: const EdgeInsets.symmetric(horizontal: 26),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                ),
-                                child: _isGenerating
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(color: K.night, strokeWidth: 2.5),
-                                      )
-                                    : const Text('Générer (1 crédit)', style: TextStyle(fontWeight: FontWeight.w800)),
-                              ),
-                            );
-                            if (narrow) {
-                              return Column(children: [field, const SizedBox(height: 14), button]);
-                            }
-                            return Row(children: [Expanded(child: field), const SizedBox(width: 16), button]);
-                          }),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    const Text(
-                      'Choisissez votre kit',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Chaque crédit génère un kit complet pour une activité.',
-                      style: TextStyle(color: K.mist),
-                    ),
-                    const SizedBox(height: 20),
-                    LayoutBuilder(builder: (context, c) {
-                      final w = c.maxWidth < 640 ? c.maxWidth : (c.maxWidth - 20) / 2;
-                      return Wrap(
-                        spacing: 20,
-                        runSpacing: 20,
-                        children: [
-                          
-                          _buildProductCard(w, 'Le Livre Stratégique', 'Votre plan d\'action complet, rédigé pour votre secteur.', '1 crédit', '79 DH', 'f8a7dd07-d155-4b83-8289-286f2e44ee6b', 79),
-                          _buildProductCard(w, 'Les Prompts IA', 'Des prompts prêts à copier pour vos ventes et votre contenu.', '1 crédit', '49 DH', '8cbddad5-7747-424e-8ed1-a1829ae46914', 49),
-                          _buildProductCard(w, 'Le Sheet Automatisé', 'Un Google Sheet qui calcule vos ventes, stocks et marges à votre place.', '1 crédit', '59 DH', 'd4b7a69e-1720-4038-8da8-cf782fed24e9', 59),
-                          _buildProductCard(w, 'Le Pack Complet', 'Le livre, les prompts et le sheet automatisé : tout votre kit en une fois.', '3 crédits', '149 DH', '54e2150a-1648-4119-a4df-208bcb121c27', 149, featured: true),
-                        ],
-                      );
-                    }),
-                    const SizedBox(height: 30),
-                  ],
-                ),
+                  // --- BOUTIQUE ---
+                  const Text(
+                    'Choisissez votre kit',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: K.sand),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Chaque crédit génère un kit complet pour une activité.',
+                    style: TextStyle(color: K.mist),
+                  ),
+                  const SizedBox(height: 20),
+                  LayoutBuilder(builder: (context, c) {
+                    final w = c.maxWidth < 640 ? c.maxWidth : (c.maxWidth - 20) / 2;
+                    return Wrap(
+                      spacing: 20,
+                      runSpacing: 20,
+                      children: [
+                        
+                        _buildProductCard(w, 'Le Livre Stratégique', 'Votre plan d\'action complet, rédigé pour votre secteur.', '1 crédit', '79 DH', 'f8a7dd07-d155-4b83-8289-286f2e44ee6b', 79, 'livre'),
+                        _buildProductCard(w, 'Les Prompts IA', 'Des prompts prêts à copier pour vos ventes et votre contenu.', '1 crédit', '49 DH', '8cbddad5-7747-424e-8ed1-a1829ae46914', 49, 'prompt'),
+                        _buildProductCard(w, 'Le Sheet Automatisé', 'Un Google Sheet qui calcule vos ventes, stocks et marges à votre place.', '1 crédit', '59 DH', 'd4b7a69e-1720-4038-8da8-cf782fed24e9', 59, 'sheet'),
+                        _buildProductCard(w, 'Le Pack Complet', 'Le livre, les prompts et le sheet automatisé : tout votre kit en une fois.', '3 crédits', '149 DH', '54e2150a-1648-4119-a4df-208bcb121c27', 149, 'pack', featured: true),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildProductCard(
     double width,
@@ -918,7 +961,8 @@ const SizedBox(height: 16),
     String credits,
     String price,
     String id,
-    double rawPrice, {
+    double rawPrice,
+    String typeProduit, {
     bool featured = false,
   }) {
     return Container(
@@ -959,7 +1003,7 @@ const SizedBox(height: 16),
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () => _buyProduct(id, rawPrice),
+              onPressed: () => _buyProduct(id, rawPrice, typeProduit),
               style: ElevatedButton.styleFrom(
                 backgroundColor: featured ? K.gold : Colors.transparent,
                 foregroundColor: featured ? K.night : K.gold,

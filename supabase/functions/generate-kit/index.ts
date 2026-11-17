@@ -17,7 +17,6 @@ serve(async (req) => {
   let supabaseClient: any = null;
 
   try {
-    const { secteurClient, emailClient, typeProduit } = await req.json()
     
     // 1. VÉRIFICATION DES CRÉDITS
     supabaseClient = createClient(
@@ -42,40 +41,52 @@ serve(async (req) => {
     if (rpcError) throw new Error(rpcError.message);
     kitId = rpcData; // On récupère l'ID du kit créé
 
-    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY')
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    const googleCredsRaw = Deno.env.get('GOOGLE_WORKSPACE_CREDENTIALS')
+    // 1. On récupère TOUTES les données d'un coup (y compris le problème)
+const { secteurClient, emailClient, typeProduit, problemeClient } = await req.json()
 
-    let livreHtml = "";
-    let promptsTexte = "";
-    let sheetUrl = "";
+// 2. On récupère les clés API
+const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY')
+const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
+const googleCredsRaw = Deno.env.get('GOOGLE_WORKSPACE_CREDENTIALS')
 
-    // ==============================================================
-    // ÉTAPE 1 : DEEPSEEK - LE STRATÈGE
-    // ==============================================================
-    const promptDeepSeek = `Rôle : Stratège d'affaires d'élite (First Principles). Cible : "${secteurClient}".
-    INTERDICTION : Pas de conseils génériques. Identifie l'hémorragie invisible, les leviers asymétriques, et l'architecture du Sheet.
-    Réponds UNIQUEMENT en JSON valide avec cette structure :
-    {
-      "diagnostic_brutal": "...",
-      "leviers_secret": [{"nom_levier": "...", "mecanisme": "...", "action_immediate": "..."}],
-      "plan_livre_anti_blabla": "...",
-      "architecture_sheet_intelligent": "..."
-    }`;
+let livreHtml = "";
+let promptsTexte = "";
+let sheetUrl = "";
 
-    const dsResponse = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + deepseekApiKey },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: promptDeepSeek }],
-      })
-    })
-    const dsData = await dsResponse.json()
-    if (!dsData.choices) throw new Error("Erreur API DeepSeek");
-    const strategieJSON = JSON.parse(dsData.choices[0].message.content);
+// ==============================================================
+// ÉTAPE 1 : DEEPSEEK - LE STRATÈGE (Adapté au problème)
+// ==============================================================
+const contexteProbleme = problemeClient 
+  ? `Le client possède déjà un business dans : "${secteurClient}". Son problème critique actuel est : "${problemeClient}". Ton rôle est de l'aider à surmonter ce blocage spécifique.`
+  : `Le client souhaite lancer un nouveau business dans : "${secteurClient}". Ton rôle est de l'aider à démarrer sans faire d'erreurs.`;
 
+const promptDeepSeek = `Rôle : Stratège d'affaires d'élite (First Principles). 
+Contexte : ${contexteProbleme}
+
+INTERDICTION : Pas de conseils génériques. Identifie l'hémorragie invisible, les leviers asymétriques, et l'architecture du Sheet.
+Réponds UNIQUEMENT en JSON valide avec cette structure :
+{
+  "diagnostic_brutal": "...",
+  "leviers_secret": [{"nom_levier": "...", "mecanisme": "...", "action_immediate": "..."}],
+  "plan_livre_anti_blabla": "...",
+  "architecture_sheet_intelligent": "..."
+}`;
+
+const dsResponse = await fetch("https://api.deepseek.com/chat/completions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Authorization": "Bearer " + deepseekApiKey },
+  body: JSON.stringify({
+    model: "deepseek-chat",
+    response_format: { type: "json_object" },
+    messages: [{ role: "user", content: promptDeepSeek }],
+  })
+})
+const dsData = await dsResponse.json()
+if (!dsData.choices) throw new Error("Erreur API DeepSeek");
+const strategieJSON = JSON.parse(dsData.choices[0].message.content);
+
+// (Le reste du code pour Gemini, Sheets, etc. reste identique. 
+// Gemini utilisera automatiquement strategieJSON qui contient maintenant les infos du problème).
     // ==============================================================
     // ÉTAPE 2 : GEMINI - LE RÉDACTEUR (Livre)
     // ==============================================================
