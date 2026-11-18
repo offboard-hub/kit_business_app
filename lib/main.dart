@@ -1196,6 +1196,99 @@ class PageTexteLegal extends StatelessWidget {
     );
   }
 }
+// ==========================================
+// 1. PAGE CGV
+// ==========================================
+class CGVPage extends StatelessWidget {
+  const CGVPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const String texte = '''
+1. Objet
+Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre Kit Business (édité par Offboard-Hub) et tout utilisateur effectuant un achat sur le site e-booklive.offboard-hub.com.
+
+2. Produits et Services
+Les produits proposés sont des contenus numériques (livres PDF, prompts IA, tableaux Google Sheets) générés par intelligence artificielle à la demande. Ils sont fournis immédiatement après le paiement. Aucune livraison physique n'est effectuée.
+
+3. Prix et Moyens de Paiement
+Les prix sont indiqués en Dirhams (MAD) et en Dollars (USD). Le paiement est exigible immédiatement. Pour sécuriser vos transactions, nous faisons appel à plusieurs prestataires de paiement certifiés :
+- YouCan Pay (Cartes bancaires marocaines)
+- Flutterwave (Cartes internationales, Mobile Money)
+- Paystack (Cartes bancaires, virements)
+- SinetPay (Mobile Money - Afrique de l'Ouest)
+- Lemon Squeezy (Paiements internationaux)
+
+4. Droit de rétractation
+Conformément à la législation sur les produits numériques fournis immédiatement, le client renonce à son droit de rétractation une fois le produit généré. Toutefois, en cas d'erreur technique, les crédits sont automatiquement remboursés.
+
+5. Contact
+Pour toute question, contactez-nous à : contact@e-booklive.offboard-hub.com
+''';
+
+    return Scaffold(
+      backgroundColor: K.night,
+      appBar: AppBar(
+        backgroundColor: K.deep,
+        title: const Text('Conditions Générales', style: TextStyle(color: K.gold, fontWeight: FontWeight.bold)),
+        iconTheme: const IconThemeData(color: K.gold),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          texte, // 👈 Le texte est bien ici
+          style: const TextStyle(color: K.sand, fontSize: 15, height: 1.6),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 2. PAGE MENTIONS LÉGALES
+// ==========================================
+class MentionsLegalesPage extends StatelessWidget {
+  const MentionsLegalesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const String texte = '''
+Éditeur du site :
+Kit Business / Offboard-Hub
+Email : contact@e-booklive.offboard-hub.com
+Site web : https://e-booklive.offboard-hub.com
+
+Hébergement :
+Le site est hébergé par Netlify (www.netlify.com).
+
+Propriété intellectuelle :
+L'ensemble des contenus générés (textes, livres, prompts) est protégé. Toute reproduction sans autorisation est interdite.
+
+Responsable de publication :
+Fatima Touré
+''';
+
+    return Scaffold(
+      backgroundColor: K.night,
+      appBar: AppBar(
+        backgroundColor: K.deep,
+        title: const Text('Mentions Légales', style: TextStyle(color: K.gold, fontWeight: FontWeight.bold)),
+        iconTheme: const IconThemeData(color: K.gold),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          texte,
+          style: const TextStyle(color: K.sand, fontSize: 15, height: 1.6),
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// 3. PAGE FAQ (Questions Fréquentes)
+// ==========================================
 class FAQPage extends StatelessWidget {
   const FAQPage({super.key});
 
@@ -1210,33 +1303,41 @@ class FAQPage extends StatelessWidget {
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: [
-          _buildFAQItem(
-            'Comment fonctionne Kit Business ?',
-            'Vous choisissez votre secteur d’activité, effectuez le paiement, et notre intelligence artificielle génère instantanément votre livre stratégique, vos prompts marketing et votre tableau financier Google Sheets. Tout s’affiche directement dans votre espace client.',
+        children: const [
+          FAQItem(
+            question: 'Comment fonctionne Kit Business ?',
+            reponse: 'Vous choisissez votre secteur d’activité, effectuez le paiement, et notre intelligence artificielle génère instantanément votre livre stratégique, vos prompts marketing et votre tableau financier Google Sheets.',
           ),
-          _buildFAQItem(
-            'Est-ce que je reçois un produit physique ?',
-            'Non, il s’agit de produits 100% numériques (fichiers PDF et liens Google Sheets). Ils sont disponibles immédiatement après le paiement.',
+          FAQItem(
+            question: 'Est-ce que je reçois un produit physique ?',
+            reponse: 'Non, il s’agit de produits 100% numériques (fichiers PDF et liens Google Sheets). Ils sont disponibles immédiatement après le paiement.',
           ),
-          _buildFAQItem(
-            'Puis-je télécharger mon livre ?',
-            'Oui, une fois généré, un bouton "Télécharger en PDF" vous permet d’enregistrer votre livre sur votre appareil.',
+          FAQItem(
+            question: 'Puis-je télécharger mon livre ?',
+            reponse: 'Oui, une fois généré, un bouton "Télécharger en PDF" vous permet d’enregistrer votre livre sur votre appareil.',
           ),
-          _buildFAQItem(
-            'Quels sont les moyens de paiement acceptés ?',
-            'Nous acceptons les cartes bancaires marocaines (via YouCan Pay) et les cartes internationales / Mobile Money (via Flutterwave).',
+          FAQItem(
+            question: 'Quels sont les moyens de paiement acceptés ?',
+            reponse: 'Nous acceptons les cartes bancaires (via YouCan Pay, Flutterwave, Paystack) et le Mobile Money (via SinetPay).',
           ),
-          _buildFAQItem(
-            'Comment obtenir de l’aide ?',
-            'Pour toute assistance, écrivez-nous à contact@e-booklive.offboard-hub.com. Nous répondons sous 24h.',
+          FAQItem(
+            question: 'Comment obtenir de l’aide ?',
+            reponse: 'Pour toute assistance, écrivez-nous à contact@e-booklive.offboard-hub.com. Nous répondons sous 24h.',
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFAQItem(String question, String reponse) {
+// Widget réutilisable pour la FAQ
+class FAQItem extends StatelessWidget {
+  final String question;
+  final String reponse;
+  const FAQItem({super.key, required this.question, required this.reponse});
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       color: K.deep,
       margin: const EdgeInsets.only(bottom: 12),
@@ -1254,50 +1355,4 @@ class FAQPage extends StatelessWidget {
       ),
     );
   }
-}
-class CGVPage extends StatelessWidget {
-  const CGVPage({super.key});
-  @override
-  Widget build(BuildContext context) => const PageTexteLegal(
-    titre: 'Conditions Générales de Vente',
-    contenu: '''
-1. Objet
-Les présentes Conditions Générales de Vente régissent les relations contractuelles entre Kit Business et tout utilisateur effectuant un achat sur le site e-booklive.offboard-hub.com.
-
-2. Produits
-Les produits proposés sont des contenus numériques (livres PDF, prompts IA, tableaux Google Sheets) générés par intelligence artificielle à la demande. Ils ne constituent pas des livraisons physiques.
-
-3. Prix et Paiement
-Les prix sont indiqués en Dirhams (MAD) et en Dollars (USD). Le paiement est exigible immédiatement. Nous utilisons des prestataires sécurisés (YouCan Pay et Flutterwave).
-
-4. Droit de rétractation
-S’agissant de contenus numériques fournis immédiatement et personnalisés, le client renonce expressément à son droit de rétractation une fois le produit généré.
-
-5. Responsabilité
-Kit Business fournit des conseils à titre indicatif. Le client reste seul responsable de l’application de ces conseils dans son activité.
-''',
-  );
-}
-
-class MentionsLegalesPage extends StatelessWidget {
-  const MentionsLegalesPage({super.key});
-  @override
-  Widget build(BuildContext context) => const PageTexteLegal(
-    titre: 'Mentions Légales',
-    contenu: '''
-Éditeur du site :
-Kit Business / Offboard-Hub
-Email : contact@e-booklive.offboard-hub.com
-Site web : https://e-booklive.offboard-hub.com
-
-Hébergement :
-Le site est hébergé par Netlify (www.netlify.com).
-
-Propriété intellectuelle :
-L’ensemble des contenus générés (textes, livres, prompts) est protégé. Toute reproduction sans autorisation est interdite.
-
-Responsable de publication :
-Fatima Touré
-''',
-  );
 }
