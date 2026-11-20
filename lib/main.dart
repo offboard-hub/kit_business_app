@@ -1212,12 +1212,10 @@ Les présentes Conditions Générales de Vente (CGV) régissent les relations co
 Les produits proposés sont des contenus numériques (livres PDF, prompts IA, tableaux Google Sheets) générés par intelligence artificielle à la demande. Ils sont fournis immédiatement après le paiement. Aucune livraison physique n'est effectuée.
 
 3. Prix et Moyens de Paiement
-Les prix sont indiqués en Dirhams (MAD) et en Dollars (USD). Le paiement est exigible immédiatement. Pour sécuriser vos transactions, nous faisons appel à plusieurs prestataires de paiement certifiés :
-- YouCan Pay (Cartes bancaires marocaines)
-- Flutterwave (Cartes internationales, Mobile Money)
-- Paystack (Cartes bancaires, virements)
-- SinetPay (Mobile Money - Afrique de l'Ouest)
-- Lemon Squeezy (Paiements internationaux)
+Les prix sont indiqués en Dirhams (MAD) et en Dollars (USD). Le paiement est exigible immédiatement. Pour garantir des transactions 100% sécurisées, nous travaillons avec trois partenaires de paiement certifiés :
+- YouCan Pay : pour les cartes bancaires locales au Maroc.
+- PaySaS : pour les paiements et abonnements SaaS.
+- Paddle : pour les paiements internationaux (cartes bancaires mondiales) et la gestion des taxes.
 
 4. Droit de rétractation
 Conformément à la législation sur les produits numériques fournis immédiatement, le client renonce à son droit de rétractation une fois le produit généré. Toutefois, en cas d'erreur technique, les crédits sont automatiquement remboursés.
@@ -1236,14 +1234,13 @@ Pour toute question, contactez-nous à : contact@e-booklive.offboard-hub.com
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Text(
-          texte, // 👈 Le texte est bien ici
+          texte,
           style: const TextStyle(color: K.sand, fontSize: 15, height: 1.6),
         ),
       ),
     );
   }
 }
-
 // ==========================================
 // 2. PAGE MENTIONS LÉGALES
 // ==========================================
@@ -1318,7 +1315,7 @@ class FAQPage extends StatelessWidget {
           ),
           FAQItem(
             question: 'Quels sont les moyens de paiement acceptés ?',
-            reponse: 'Nous acceptons les cartes bancaires (via YouCan Pay, Flutterwave, Paystack) et le Mobile Money (via SinetPay).',
+            reponse: 'Nous acceptons les cartes bancaires marocaines via YouCan Pay, les solutions SaaS via PaySaS, et les paiements internationaux via Paddle.',
           ),
           FAQItem(
             question: 'Comment obtenir de l’aide ?',
