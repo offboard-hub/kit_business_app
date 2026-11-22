@@ -46,3 +46,11 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Secrets et outils locaux (ne jamais commiter)
+.env
+supabase/.env
+supabase/.temp/
+.npm-cache/
+.tools/
+*.log

@@ -1,0 +1,172 @@
+// ============================================================================
+//  LIVRAISON PAR EMAIL (Resend) — les liens du kit sont envoyés au client
+//  après validation du paiement SasPay, et affichés sur la page de confirmation.
+//  Aucun autre canal d'envoi automatique n'est utilisé.
+// ============================================================================
+
+import { SITE_URL, formaterFcfa, lienAideWhatsApp, OFFRES, type TypeProduit } from "./config.ts";
+import { type LiensKit } from "./kit-engine.ts";
+
+export interface ResultatEnvoi {
+  ok: boolean;
+  id?: string;
+  error?: string;
+  canal: "email";
+}
+
+function echapperHtml(valeur: string): string {
+  return (valeur ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ----------------------------------------------------------------------------
+//  RESEND
+// ----------------------------------------------------------------------------
+
+export async function envoyerEmail(params: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<ResultatEnvoi> {
+  const cle = Deno.env.get("RESEND_API_KEY");
+  const from = Deno.env.get("RESEND_FROM_EMAIL") ?? "Kit Business <bonjour@kit-business.africa>";
+
+  if (!cle) {
+    return { ok: false, canal: "email", error: "RESEND_API_KEY non configurée." };
+  }
+  if (!params.to) {
+    return { ok: false, canal: "email", error: "Adresse email du client manquante." };
+  }
+
+  try {
+    const reponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cle}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [params.to],
+        subject: params.subject,
+        html: params.html,
+        reply_to: params.replyTo ?? Deno.env.get("SUPPORT_EMAIL") ?? undefined,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    const donnees = await reponse.json().catch(() => ({}));
+    if (!reponse.ok) {
+      return {
+        ok: false,
+        canal: "email",
+        error: donnees?.message ?? `Resend a renvoyé HTTP ${reponse.status}`,
+      };
+    }
+    return { ok: true, canal: "email", id: String(donnees?.id ?? "") };
+  } catch (erreur) {
+    return {
+      ok: false,
+      canal: "email",
+      error: erreur instanceof Error ? erreur.message : String(erreur),
+    };
+  }
+}
+
+// ----------------------------------------------------------------------------
+//  GABARITS D'EMAILS
+// ----------------------------------------------------------------------------
+
+export function emailLivraisonHtml(params: {
+  nomProjet: string;
+  metierLabel: string;
+  paysLabel: string;
+  produit: TypeProduit;
+  liens: LiensKit;
+}): string {
+  const offre = OFFRES[params.produit];
+  const bouton = (url: string, libelle: string, couleur: string) =>
+    `<p style="margin:0 0 12px 0;"><a href="${url}" style="display:inline-block;background:${couleur};color:#14123A;font-weight:800;text-decoration:none;padding:14px 22px;border-radius:12px;">${libelle}</a></p>`;
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#14123A;font-family:Arial,Helvetica,sans-serif;color:#F6EBD4;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 20px;">
+    <p style="font-size:20px;font-weight:800;color:#E8B04B;margin:0 0 24px 0;">🚀 Kit Business</p>
+    <h1 style="font-size:26px;line-height:1.2;margin:0 0 12px 0;">Votre kit est prêt</h1>
+    <p style="font-size:16px;line-height:1.6;color:#B9B4D6;margin:0 0 24px 0;">
+      Bonjour, votre kit <strong style="color:#F6EBD4;">${echapperHtml(offre.titre)}</strong> pour le projet
+      <strong style="color:#F6EBD4;">${echapperHtml(params.nomProjet)}</strong>
+      (${echapperHtml(params.metierLabel)} — ${echapperHtml(params.paysLabel)}) vient d'être généré.
+    </p>
+
+    <div style="background:#1F1B55;border:1px solid rgba(232,176,75,0.35);border-radius:18px;padding:22px;margin-bottom:24px;">
+      ${params.liens.livre ? bouton(params.liens.livre, "📘 Ouvrir mon livre stratégique", "#E8B04B") : ""}
+      ${params.liens.prompts ? bouton(params.liens.prompts, "🤖 Ouvrir mes prompts IA", "#F3D38F") : ""}
+      ${params.liens.sheet ? bouton(params.liens.sheet, "📊 Ouvrir mon Google Sheet", "#B8643C") : ""}
+    </div>
+
+    <p style="font-size:14px;line-height:1.6;color:#B9B4D6;margin:0 0 8px 0;">
+      Conseils : ouvrez les liens sur un ordinateur pour télécharger le livre en PDF
+      (bouton « Télécharger en PDF » en haut de la page de lecture).
+    </p>
+    <p style="font-size:14px;line-height:1.6;color:#B9B4D6;margin:0 0 24px 0;">
+      Besoin d'aide ? <a href="${lienAideWhatsApp()}" style="color:#E8B04B;">Écrivez-nous sur WhatsApp</a>.
+    </p>
+    <p style="font-size:12px;color:#6F6A8A;">© Kit Business — ${SITE_URL}</p>
+  </div>
+</body></html>`;
+}
+
+export function emailBienvenueHtml(params: { email: string; prenom?: string }): string {
+  const nom = params.prenom?.trim() ? ` ${echapperHtml(params.prenom.trim())}` : "";
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#14123A;font-family:Arial,Helvetica,sans-serif;color:#F6EBD4;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 20px;">
+    <p style="font-size:20px;font-weight:800;color:#E8B04B;margin:0 0 24px 0;">🚀 Kit Business</p>
+    <h1 style="font-size:26px;line-height:1.2;margin:0 0 12px 0;">Bienvenue${nom} 👋</h1>
+    <p style="font-size:16px;line-height:1.7;color:#B9B4D6;">
+      Voici ce que nous faisons, simplement : nous transformons votre métier en un
+      <strong style="color:#F6EBD4;">kit business clés en main</strong> — livre stratégique,
+      prompts IA et Google Sheet de gestion — rédigé pour votre pays et votre activité,
+      avec tous les montants en FCFA.
+    </p>
+
+    <div style="background:#1F1B55;border:1px solid rgba(232,176,75,0.35);border-radius:18px;padding:20px 22px;margin:24px 0;">
+      <p style="margin:0 0 10px 0;font-size:15px;color:#F6EBD4;"><strong>Nos offres</strong></p>
+      <p style="margin:0;line-height:1.9;font-size:14px;color:#B9B4D6;">
+        🤖 Prompts IA — ${formaterFcfa(3000)}<br>
+        📊 Sheet Automatisé — ${formaterFcfa(3500)}<br>
+        📘 Livre Stratégique — ${formaterFcfa(5000)}<br>
+        💎 Pack Complet (le plus choisi) — ${formaterFcfa(9000)}
+      </p>
+    </div>
+
+    <p style="margin:0 0 12px 0;font-size:15px;color:#F6EBD4;"><strong>Vos 6 kits métiers</strong></p>
+    <p style="margin:0 0 24px 0;line-height:1.9;font-size:14px;color:#B9B4D6;">
+      🍲 Restaurant / Maquis · 🛍️ Boutique E-commerce · 🌾 Élevage / Agriculture<br>
+      💅 Salon de Beauté · 💼 Agence de Services · 🏦 Dossier de Financement
+    </p>
+
+    <p style="margin:0 0 24px 0;">
+      <a href="${SITE_URL}/#/commande" style="display:inline-block;background:#E8B04B;color:#14123A;font-weight:800;text-decoration:none;padding:14px 24px;border-radius:12px;">Choisir mon kit</a>
+    </p>
+
+    <p style="font-size:14px;line-height:1.7;color:#B9B4D6;margin:0 0 8px 0;">
+      Paiement mobile money ou carte via <strong style="color:#F6EBD4;">SasPay</strong>.
+      Livraison immédiate par email après le paiement, et liens affichés directement à l'écran.
+    </p>
+    <p style="font-size:14px;line-height:1.7;color:#B9B4D6;margin:0 0 24px 0;">
+      Pour toute question : <a href="${lienAideWhatsApp()}" style="color:#E8B04B;">notre WhatsApp</a>
+      ou répondez simplement à cet email.
+    </p>
+    <p style="font-size:12px;color:#6F6A8A;">Vous recevez cet email car vous avez manifesté votre intérêt pour Kit Business.
+    Aucune confirmation n'est nécessaire, votre compte est déjà actif.<br>© Kit Business — ${SITE_URL}</p>
+  </div>
+</body></html>`;
+}

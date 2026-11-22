@@ -1,6 +1,10 @@
+# Plugin Flutter pour compiler l'application lors du build Netlify.
 [[plugins]]
   package = "netlify-plugin-flutter"
 
 [build]
-  command = "flutter build web --release"
+  command = "flutter build web --release --dart-define=SITE_URL=$SITE_URL --dart-define=WHATSAPP_AIDE_NUMBER=$WHATSAPP_AIDE_NUMBER"
   publish = "build/web"
+
+[build.environment]
+  FLUTTER_VERSION = "3.47.9"

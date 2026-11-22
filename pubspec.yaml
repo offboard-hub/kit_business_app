@@ -37,7 +37,8 @@ dependencies:
   supabase_flutter: ^2.18.3
   url_launcher: ^6.3.3
   flutter_widget_from_html: ^0.17.4
-  printing: ^5.15.1
+  http: ^1.2.0
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

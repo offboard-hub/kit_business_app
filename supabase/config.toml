@@ -1,66 +1,61 @@
+# ============================================================================
+#  Configuration des Edge Functions — Kit Business
+#  L'authentification est vérifiée DANS chaque fonction (JWT Supabase, rôle
+#  admin, secret de cron ou signature SasPay), d'où verify_jwt = false
+#  pour permettre aussi les appels publics légitimes (webhooks, retour SasPay).
+# ============================================================================
+
+project_id = "ynephuutnazdnjhsdlsy"
 
 [functions.generate-kit]
 enabled = true
 verify_jwt = false
 import_map = "./functions/generate-kit/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/generate-kit/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/generate-kit/*.html" ]
-
-[functions.verufy-payment]
-enabled = true
-verify_jwt = false
-import_map = "./functions/verufy-payment/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/verufy-payment/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/verufy-payment/*.html" ]
-
-[functions.view-kit]
-enabled = true
-verify_jwt = false
-import_map = "./functions/view-kit/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/view-kit/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/view-kit/*.html" ]
 
 [functions.verify-payment]
 enabled = true
 verify_jwt = false
 import_map = "./functions/verify-payment/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/verify-payment/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/verify-payment/*.html" ]
 
-[functions.send-email]
+[functions.view-kit]
 enabled = true
 verify_jwt = false
-import_map = "./functions/send-email/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/send-email/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/send-email/*.html" ]
+import_map = "./functions/view-kit/deno.json"
+entrypoint = "./functions/view-kit/index.ts"
 
-[functions.auth-email-hook]
+[functions.saspay-checkout]
 enabled = true
 verify_jwt = false
-import_map = "./functions/auth-email-hook/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/auth-email-hook/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/auth-email-hook/*.html" ]
+entrypoint = "./functions/saspay-checkout/index.ts"
+
+[functions.saspay-webhook]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/saspay-webhook/index.ts"
+
+[functions.welcome-email]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/welcome-email/index.ts"
+
+[functions.site-assistant]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/site-assistant/index.ts"
+
+[functions.youtube-live-bot]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/youtube-live-bot/index.ts"
+
+[functions.video-agency-pipeline]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/video-agency-pipeline/index.ts"
+
+[functions.tiktok-auth]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/tiktok-auth/index.ts"

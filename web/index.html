@@ -1,54 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Kit Business</title>
-  <meta name="description" content="Générez votre kit business avec l'IA.">
+  <meta name="theme-color" content="#14123A">
 
-  <!-- Le Favicon (Fusée) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
+  <title>Kit Business — Kits métiers clés en main en FCFA</title>
+  <meta name="description" content="Choisissez votre métier en 1 clic et recevez un livre stratégique, des prompts IA et un Google Sheet automatisé. Prix en FCFA, paiement mobile money et carte via SasPay, livraison immédiate sur WhatsApp et par email.">
+  <meta name="keywords" content="kit business, Afrique francophone, FCFA, prompts IA, livre stratégique, Google Sheets, restaurant, e-commerce, élevage, salon de beauté, financement">
+  <meta property="og:title" content="Kit Business — votre kit métier clés en main en FCFA">
+  <meta property="og:description" content="Livre stratégique, prompts IA et Google Sheet automatisé pour votre métier, dans votre pays. Livraison immédiate sur WhatsApp et par email.">
+  <meta property="og:type" content="website">
+  <meta name="robots" content="index, follow">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23E8B04B'/%3E%3Ctext x='50' y='70' font-size='58' text-anchor='middle'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
 
   <link rel="manifest" href="manifest.json">
 
   <style>
     /* Masquer le badge Netlify */
-    #netlify-badge, 
-    iframe[title="Netlify Drawer"] { 
-      display: none !important; 
+    #netlify-badge,
+    iframe[title="Netlify Drawer"] {
+      display: none !important;
     }
 
-    /* Style de l'animation de chargement */
-    @keyframes loading {
+    @keyframes chargement {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(200%); }
     }
   </style>
 </head>
 <body>
-  
-  <!-- L'écran de chargement -->
-  <div id="splash-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #14123A; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; font-family: sans-serif;">
-    <div style="font-size: 60px; margin-bottom: 20px;">🚀</div>
-    <h1 style="color: #E8B04B; font-size: 32px; font-weight: bold; letter-spacing: 2px; margin: 0;">KIT BUSINESS</h1>
-    <p style="color: #F6EBD4; margin-top: 10px;">Chargement de votre espace...</p>
-    <div style="margin-top: 20px; width: 150px; height: 4px; background-color: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
-      <div style="width: 50%; height: 100%; background-color: #E8B04B; border-radius: 2px; animation: loading 1.5s infinite ease-in-out;"></div>
+
+  <!-- Écran de chargement -->
+  <div id="splash-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #14123A; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;">
+    <div style="font-size: 54px; margin-bottom: 18px;">🚀</div>
+    <h1 style="color: #E8B04B; font-size: 28px; font-weight: 800; letter-spacing: 3px; margin: 0;">KIT BUSINESS</h1>
+    <p style="color: #F6EBD4; margin-top: 10px; font-size: 14px;">Vos kits métiers clés en main — 100 % FCFA</p>
+    <div style="margin-top: 22px; width: 160px; height: 4px; background-color: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+      <div style="width: 50%; height: 100%; background-color: #E8B04B; border-radius: 2px; animation: chargement 1.5s infinite ease-in-out;"></div>
     </div>
+    <p style="color: #B9B4D6; margin-top: 18px; font-size: 11px;">Paiement sécurisé SasPay · livraison WhatsApp &amp; email</p>
   </div>
 
-  <!-- Le script Flutter -->
   <script src="flutter_bootstrap.js" async></script>
-  
-  <!-- Le script qui efface l'écran de chargement une fois le site prêt -->
+
   <script>
     window.addEventListener('flutter-first-frame', function () {
-      document.getElementById('splash-screen').style.display = 'none';
+      var ecran = document.getElementById('splash-screen');
+      if (ecran) ecran.style.display = 'none';
     });
   </script>
-  
+
 </body>
-</html> 
+</html>
