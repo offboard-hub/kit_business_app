@@ -279,7 +279,7 @@ class _TexteHero extends StatelessWidget {
                   icone: Icons.sensors_rounded,
                   couleur: K.emeraude,
                 ),
-                const Puce(texte: '10 USD / mois', icone: Icons.sell_rounded),
+                const Puce(texte: '10 USD / 30 jours', icone: Icons.sell_rounded),
                 if (essaiActif)
                   Puce(
                     texte: 'Essai · ${acces!.essai!.joursRestants} j restants',
@@ -314,7 +314,7 @@ class _TexteHero extends StatelessWidget {
             const Text(
               'Une régie live professionnelle, un co-animateur à distance, un chat IA '
               'commercial qui répond aux spectateurs et un Livre Guide personnalisé '
-              'pour votre métier. Essayez 3 jours gratuitement, sans carte, puis 10 \$ par mois.',
+              'pour votre métier. Essayez 3 jours gratuitement, sans carte, puis 10 USD pour 30 jours.',
               style: TextStyle(color: K.muted, fontSize: 15.5, height: 1.65),
             ),
             const SizedBox(height: 24),
@@ -352,7 +352,7 @@ class _TexteHero extends StatelessWidget {
                             const Padding(
                               padding: EdgeInsets.only(bottom: 5),
                               child: Text(
-                                '/ mois',
+                                '/ 30 jours',
                                 style: TextStyle(color: K.faint, fontSize: 11),
                               ),
                             ),
@@ -400,7 +400,7 @@ class _TexteHero extends StatelessWidget {
                   SizedBox(
                     width: 290,
                     child: OrButton(
-                      label: 'S\'abonner maintenant : 10 USD / mois',
+                      label: 'S\'abonner maintenant : 10 USD / 30 jours',
                       icone: Icons.workspace_premium_rounded,
                       onPressed: onSouscrire,
                     ),
@@ -420,8 +420,8 @@ class _TexteHero extends StatelessWidget {
                     width: 300,
                     child: OrButton(
                       label: essaiActif
-                          ? 'S\'abonner maintenant : 10 USD / mois'
-                          : (essaiExpire ? 'Voir le Studio Live' : 'S\'abonner maintenant : 10 USD / mois'),
+                          ? 'S\'abonner maintenant : 10 USD / 30 jours'
+                          : (essaiExpire ? 'Voir le Studio Live' : 'S\'abonner maintenant : 10 USD / 30 jours'),
                       icone: Icons.workspace_premium_rounded,
                       plein: false,
                       onPressed: onSouscrire,
@@ -823,7 +823,7 @@ class _Avantages extends StatelessWidget {
         const TitreSection(
           surtitre: 'Tout est inclus',
           titre: 'Un vrai studio, sans matériel',
-          sousTitre: 'Ce que les créateurs paient ailleurs en plusieurs abonnements, réuni ici pour 10 \$ par mois.',
+          sousTitre: 'Ce que les créateurs paient ailleurs en plusieurs abonnements, réuni ici pour 10 USD pour 30 jours.',
           centre: true,
         ),
         const SizedBox(height: 28),
@@ -938,7 +938,7 @@ class _Contenu extends StatelessWidget {
                 style: TextStyle(color: K.muted, fontSize: 12.5, height: 1.6),
               ),
               const SizedBox(height: 18),
-              const Puce(texte: '10 USD / mois', icone: Icons.sell_rounded, couleur: K.emeraude),
+              const Puce(texte: '10 USD / 30 jours', icone: Icons.sell_rounded, couleur: K.emeraude),
             ],
           );
           final droite = Column(
@@ -994,7 +994,7 @@ class _CommentCaMarche extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const etapes = <(String, String)>[
-      ('Abonnez-vous', '10 USD / mois, converti dans votre devise, SasPay ou Paddle.'),
+      ('Abonnez-vous', '10 USD / 30 jours, converti dans votre devise, SasPay ou Paddle.'),
       ('Préparez votre live', 'Choisissez vos plateformes, votre format, votre mode visuel et votre fiche produit.'),
       ('Animez et vendez', 'Ouvrez la salle Jitsi, laissez le chat IA répondre, suivez votre Livre Guide.'),
     ];
@@ -1110,7 +1110,7 @@ class _AppelFinal extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Essayez 3 jours gratuitement, sans carte. Puis 10 \$ par mois, sans engagement. '
+            'Essayez 3 jours gratuitement, sans carte. Puis 10 USD pour 30 jours, sans engagement. '
             'Livre Guide offert dès l\'abonnement.',
             textAlign: TextAlign.center,
             style: TextStyle(color: K.muted, fontSize: 12.5, height: 1.5),
@@ -1133,7 +1133,7 @@ class _AppelFinal extends StatelessWidget {
               SizedBox(
                 width: 280,
                 child: OrButton(
-                  label: 'S\'abonner maintenant : 10 USD / mois',
+                  label: 'S\'abonner maintenant : 10 USD / 30 jours',
                   icone: Icons.workspace_premium_rounded,
                   plein: false,
                   onPressed: onSouscrire,

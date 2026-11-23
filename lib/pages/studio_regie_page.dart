@@ -374,7 +374,7 @@ class _StudioRegiePageState extends State<StudioRegiePage> {
           texte:
               'Votre essai gratuit de 3 jours est terminé. Abonnez-vous pour retrouver la régie, '
               'le chat IA et votre Livre Guide personnalisé. Aucun prélèvement automatique n\'a eu lieu.',
-          bouton: 'S\'abonner maintenant : 10 USD / mois',
+          bouton: 'S\'abonner maintenant : 10 USD / 30 jours',
           onPressed: () => Navigator.pushNamed(context, '/studio-live'),
           secondaire: 'Voir l\'offre Studio Live',
           onSecondaire: () => Navigator.pushNamed(context, '/studio-live'),
@@ -388,7 +388,7 @@ class _StudioRegiePageState extends State<StudioRegiePage> {
             '(20 messages par jour). Le Livre Guide s\'ouvre avec l\'abonnement.',
         bouton: 'Essayer gratuitement 3 jours',
         onPressed: _demarrerEssaiDepuisRegie,
-        secondaire: 'S\'abonner maintenant : 10 USD / mois',
+        secondaire: 'S\'abonner maintenant : 10 USD / 30 jours',
         onSecondaire: () => Navigator.pushNamed(context, '/studio-live'),
       );
     }
@@ -1743,7 +1743,7 @@ class _GuideVerrouille extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 OrButton(
-                  label: 'S\'abonner maintenant : 10 USD / mois',
+                  label: 'S\'abonner maintenant : 10 USD / 30 jours',
                   icone: Icons.workspace_premium_rounded,
                   onPressed: onSouscrire,
                 ),

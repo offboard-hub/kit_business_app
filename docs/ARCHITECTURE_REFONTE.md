@@ -18,7 +18,7 @@
   - 23 pays SasPay (voir §3) → montant calculé côté serveur dans la devise locale,
     `saspay-checkout`.
   - Tous les autres pays → `create-paddle-checkout` (Paddle Billing), montant
-    EUR/USD + conversion indicative locale, `paddle-webhook`.
+    **USD par défaut** + conversion indicative locale, `paddle-webhook`.
 - **Aucun montant envoyé par le client n'est accepté** : tout est recalculé côté serveur.
 - **`/admin-videos` invisible** pour tout non-admin : entrée du menu Compte uniquement
   si `is_admin = true` (table `profiles`) ou email dans `ADMIN_EMAILS`, route protégée.
@@ -66,7 +66,8 @@ Le site Netlify doit réécrire toutes les URL vers `index.html` (SPA fallback).
 | INR | Inde (IN) |
 
 Tous les autres pays (Maroc, France, Belgique, Suisse, Canada, USA, Émirats…) → Paddle.
-Devise d'affichage Paddle : **EUR** pour l'Europe + Maghreb, **USD** sinon.
+Devise d'affichage Paddle : **USD par défaut** pour tous les pays Paddle ; la
+conversion locale est indicative.
 La conversion locale reste indicative.
 
 ### Taux (1 XOF = X devise locale)
@@ -249,8 +250,7 @@ Même entrée que §5.1. Utilise les prix Paddle :
 ```
 PADDLE_PRICE_KIT_PROMPT / _SHEET / _LIVRE / _PACK
 PADDLE_PRICE_STUDIO
-// variantes EUR optionnelles : suffixe _EUR
-PADDLE_PRICE_KIT_PACK_EUR, PADDLE_PRICE_STUDIO_EUR…
+// USD par défaut ; les variantes _EUR sont obsolètes et ne sont plus utilisées.
 ```
 
 Sortie :
@@ -259,9 +259,9 @@ Sortie :
   "success": true, "provider": "paddle", "kind": "kit",
   "order_id": "uuid", "subscription_id": null,
   "transaction_id": "txn_…", "checkout_url": "https://…|null",
-  "client_token": "live_…", "environment": "production",
-  "montant": 13.72, "devise": "EUR",
-  "montant_indicatif": 165.0, "devise_indicative": "MAD",
+  "client_token": "test_…", "environment": "sandbox",
+  "montant": 14.85, "devise": "USD",
+  "montant_indicatif": 147.60, "devise_indicative": "MAD",
   "offre": "Pack Complet", "metier": "E-commerce & Mode", "pays": "Maroc"
 }
 ```
@@ -343,10 +343,11 @@ Même contrat d'entrée/sortie qu'aujourd'hui.
 ```
 SITE_URL, WHATSAPP_AIDE_NUMBER, SUPPORT_EMAIL
 SASPAY_API_KEY, SASPAY_WEBHOOK_SECRET, SASPAY_BASE_URL
-PADDLE_API_KEY, PADDLE_CLIENT_TOKEN, PADDLE_WEBHOOK_SECRET
-PADDLE_ENVIRONMENT=sandbox|production
+PADDLE_API_KEY, PADDLE_CLIENT_TOKEN (ou PADDLE_TOKEN_KIT), PADDLE_WEBHOOK_SECRET
+PADDLE_ENVIRONNEMENT=sandbox|production (PADDLE_ENVIRONMENT accepté en alias)
 PADDLE_PRICE_KIT_PROMPT, _SHEET, _LIVRE, _PACK, PADDLE_PRICE_STUDIO
-PADDLE_PRICE_KIT_PACK_EUR, PADDLE_PRICE_STUDIO_EUR (optionnels)
+PADDLE_PRICE_KIT_PROMPT, _SHEET, _LIVRE, _PACK, PADDLE_PRICE_STUDIO
+// USD par défaut ; PADDLE_PRICE_*_EUR obsolètes
 RESEND_API_KEY, RESEND_FROM_EMAIL
 DEEPSEEK_API_KEY, DEEPSEEK_MODEL
 GEMINI_API_KEY, GEMINI_MODEL

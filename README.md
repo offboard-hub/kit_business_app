@@ -27,7 +27,7 @@ des prompts et un tableau de gestion, livrés par email (Resend).
 - **Essai gratuit 3 jours**, sans carte ni paiement : régie, co-animateur et chat IA
   (20 messages IA/jour). Le Livre Guide reste réservé aux abonnés payants.
 - Un seul essai par utilisateur, email confirmé requis, jamais prolongeable.
-- **Abonnement 10 USD / 30 jours** (bouton « S'abonner maintenant : 10 USD / mois »),
+- **Abonnement 10 USD / 30 jours** (bouton « S'abonner maintenant : 10 USD / 30 jours »),
   converti dans la devise du pays et encaissé par SasPay ou Paddle.
 - Régie en 3 onglets :
 - **Préparer mon Live** : plateformes (salle e-booklive, TikTok, YouTube, Instagram),
@@ -47,7 +47,7 @@ Lien co-animateur : `/live/:roomId?invite=<token>` — le spectateur rejoint via
 - **23 pays SasPay** en devise locale : XOF (ML, SN, CI, BF, BJ, TG, NE), XAF (CM,
   GA, CG), CDF (CD), GNF (GN), NGN (NG), GHS (GH), SLE (SL), KES (KE), UGX (UG),
   TZS (TZ), RWF (RW), MWK (MW), MZN (MZ), ZMW (ZM), INR (IN).
-- **Reste du monde : Paddle** en EUR (Europe + Maghreb) ou USD, TVA gérée,
+- **Reste du monde : Paddle** en **USD par défaut**, TVA gérée,
   conversion locale indicative.
 - Le montant est **toujours recalculé côté serveur** ; aucun prix client n'est
   accepté. Les price IDs Paddle sont configurés par secrets (`PADDLE_PRICE_*`).
@@ -136,7 +136,7 @@ Tout est détaillé dans [`DEPLOIEMENT.md`](DEPLOIEMENT.md) :
 6. déployer sur Netlify (build command dans `netlify.toml`).
 
 Points de vigilance avant production :
-- créer les **price IDs Paddle EUR et USD** et les renseigner ;
+- créer les **price IDs Paddle USD** et les renseigner ;
 - dédoublonner `saspay_payment_id` avant l'index unique ;
 - tester la CSP Netlify en préproduction (CanvasKit local + Jitsi + Paddle) ;
 - trancher le risque F03 (accès régie par email sans confirmation d'email).
@@ -150,4 +150,5 @@ Points de vigilance avant production :
 - [`docs/REVUE_DB.md`](docs/REVUE_DB.md) — revue RLS/migration et contre-revue.
 - [`docs/REVUE_CODE.md`](docs/REVUE_CODE.md) — revue code/sécurité et contre-revue.
 - [`docs/BUILD_VERIFICATION.md`](docs/BUILD_VERIFICATION.md) — artefacts et release.
+- [`docs/PADDLE_SANDBOX_TEST.md`](docs/PADDLE_SANDBOX_TEST.md) — audit sandbox et procédure de test Paddle.
 - [`docs/tests_rls_studio.sql`](docs/tests_rls_studio.sql) — tests RLS manuels.

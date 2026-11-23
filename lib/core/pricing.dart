@@ -179,7 +179,8 @@ class Prix {
     }
     final devise = pays.devisePaddle;
     final montant = montantStudio(pays);
-    final local = arrondir(studioXof * pays.taux, pays.devise);
+    final tauxFacture = tauxXof[devise] ?? 1;
+    final local = arrondir((montant / tauxFacture) * pays.taux, pays.devise);
     return DevisPrix(
       montant: montant,
       devise: devise,
@@ -242,9 +243,9 @@ class Prix {
       return 'Paiement sécurisé SasPay, débité en ${pays.devise} '
           '(mobile money ou carte). Aucune donnée bancaire ne transite par nos serveurs.';
     }
-    return 'Paiement sécurisé Paddle en ${pays.devisePaddle}, TVA gérée automatiquement. '
+    return 'Paiement sécurisé Paddle en USD, TVA gérée automatiquement. '
         'Le montant local (${pays.devise}) est donné à titre indicatif. '
-        'Si le prix EUR n\'est pas configuré, Paddle débite le prix USD équivalent.';
+        'Paddle débite le prix USD du catalogue.';
   }
 }
 

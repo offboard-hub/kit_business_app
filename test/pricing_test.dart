@@ -28,10 +28,10 @@ void main() {
       expect(paysParCode('SN').viaSasPay, isTrue);
     });
 
-    test('le reste du monde passe par Paddle (EUR ou USD)', () {
+    test('le reste du monde passe par Paddle en USD', () {
       expect(paysParCode('MA').viaSasPay, isFalse);
-      expect(paysParCode('MA').devisePaddle, 'EUR');
-      expect(paysParCode('FR').devisePaddle, 'EUR');
+      expect(paysParCode('MA').devisePaddle, 'USD');
+      expect(paysParCode('FR').devisePaddle, 'USD');
       expect(paysParCode('US').devisePaddle, 'USD');
       expect(paysParCode('AE').devisePaddle, 'USD');
     });
@@ -67,14 +67,14 @@ void main() {
       expect(devis.indicatif, isNull);
     });
 
-    test('conversion Paddle en EUR/USD + indicatif local', () {
+    test('conversion Paddle en USD par défaut + indicatif local', () {
       final fr = Prix.devisKit(9000, paysParCode('FR'));
-      expect(fr.devise, 'EUR');
-      expect(fr.montant, 13.72);
-      expect(fr.principal, '13,72 €');
+      expect(fr.devise, 'USD');
+      expect(fr.montant, 14.85);
+      expect(fr.principal, '14,85 \$');
 
       final ma = Prix.devisKit(9000, paysParCode('MA'));
-      expect(ma.principal, '13,72 €');
+      expect(ma.principal, '14,85 \$');
       expect(ma.indicatif, '≈ 147,60 DH');
       expect(ma.deviseIndicative, 'MAD');
 
@@ -89,13 +89,14 @@ void main() {
       expect(Prix.montantStudio(paysParCode('SN')), 6100);
       expect(Prix.montantStudio(paysParCode('NG')), 15500);
 
-      final eu = Prix.devisStudio(paysParCode('FR'));
-      expect(eu.devise, 'EUR');
-      expect(eu.montant, 9.24);
+      final fr = Prix.devisStudio(paysParCode('FR'));
+      expect(fr.devise, 'USD');
+      expect(fr.montant, 10);
+      expect(fr.principal, '10,00 \$');
 
       final ma = Prix.devisStudio(paysParCode('MA'));
-      expect(ma.montant, 9.24);
-      expect(ma.indicatif, isNotNull);
+      expect(ma.montant, 10);
+      expect(ma.indicatif, '≈ 99,39 DH');
     });
 
     test('arrondis commerciaux et formatage', () {

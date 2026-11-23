@@ -4,8 +4,8 @@
 //  • Kits métiers : prix de référence en XOF / FCFA (3 000 / 3 500 / 5 000 / 9 000).
 //  • Studio Live  : 10 USD pour 30 jours (source de vérité).
 //  • SasPay       : montant converti dans la devise locale du pays.
-//  • Paddle       : montant en EUR (Europe + Maghreb) ou USD, avec une
-//                   conversion locale purement indicative.
+//  • Paddle       : montant en USD (par défaut pour tous les pays Paddle), avec
+//                   une conversion locale purement indicative.
 //
 //  Les arrondis reproduisent exactement ceux de `lib/core/pricing.dart`
 //  (`Prix.arrondir`) : le montant affiché par le frontend et celui facturé par
@@ -144,7 +144,7 @@ export function montantSasPay(
 }
 
 export interface MontantPaddle {
-  /** Montant réellement facturé par Paddle (EUR ou USD). */
+  /** Montant réellement facturé par Paddle (USD par défaut). */
   montant: number;
   /** Devise de facturation Paddle. */
   devise: string;
@@ -154,7 +154,7 @@ export interface MontantPaddle {
 }
 
 /**
- * Montant à facturer via Paddle : EUR (Europe + Maghreb) ou USD.
+ * Montant à facturer via Paddle : USD par défaut pour tous les pays Paddle.
  * Pour le Studio Live, la conversion part de 10 USD ; la conversion locale
  * indicative reste calculée sur l'équivalent XOF (6061) comme le frontend.
  */

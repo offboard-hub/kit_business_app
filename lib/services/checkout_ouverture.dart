@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../core/config.dart';
 import '../core/links.dart';
 import '../core/models.dart';
 import '../core/theme.dart';
 import 'paddle_checkout.dart';
 
-/// Lance le paiement : page hébergée SasPay/Paddle, ou overlay Paddle.js.
-/// Retourne `true` si une page/overlay a bien été ouvert.
+/// Lance le paiement : overlay Paddle.js en priorité, sinon page hébergée
+/// SasPay / Paddle.
+///
+/// ⚠️ Paddle peut renvoyer une `checkout_url` sur notre propre domaine
+/// (`https://e-booklive.offboard-hub.com?_ptxn=…`). Ouvrir ce lien comme une
+/// page externe ne déclenche AUCUN paiement : il faut passer par Paddle.js avec
+/// `transaction_id` + `client_token`, sinon on affiche une erreur claire.
 Future<bool> lancerCheckout(BuildContext context, CheckoutCree checkout) async {
-  if (checkout.checkoutUrl.isNotEmpty) {
-    final ouvert = await ouvrirLien(checkout.checkoutUrl);
-    if (!ouvert && context.mounted) {
-      await _dialogueLien(context, checkout.checkoutUrl);
-    }
-    return ouvert;
-  }
+  final estPaddle = checkout.fournisseur == Fournisseur.paddle;
 
-  if (checkout.fournisseur == Fournisseur.paddle &&
+  // 1. Paddle.js : recommandé, fonctionne aussi avec une URL de retour sur
+  //    notre domaine (le `_ptxn` est alors géré par l'overlay).
+  if (estPaddle &&
       checkout.transactionId.isNotEmpty &&
       checkout.clientToken.isNotEmpty) {
     final ouvert = await ouvrirPaddleCheckout(
@@ -27,10 +29,30 @@ Future<bool> lancerCheckout(BuildContext context, CheckoutCree checkout) async {
     if (ouvert) return true;
   }
 
+  // 2. Page de paiement hébergée (SasPay, ou Paddle si l'URL est externe).
+  if (checkout.checkoutUrl.isNotEmpty) {
+    if (estPaddle && _estNotreDomaine(checkout.checkoutUrl)) {
+      if (context.mounted) await _dialogueLien(context, '');
+      return false;
+    }
+    final ouvert = await ouvrirLien(checkout.checkoutUrl);
+    if (!ouvert && context.mounted) {
+      await _dialogueLien(context, checkout.checkoutUrl);
+    }
+    return ouvert;
+  }
+
   if (context.mounted) {
-    await _dialogueLien(context, checkout.checkoutUrl);
+    await _dialogueLien(context, '');
   }
   return false;
+}
+
+bool _estNotreDomaine(String url) {
+  final uri = Uri.tryParse(url);
+  final site = Uri.tryParse(AppConfig.siteUrl);
+  if (uri == null || site == null) return false;
+  return uri.host.isNotEmpty && uri.host == site.host;
 }
 
 Future<void> _dialogueLien(BuildContext context, String url) async {

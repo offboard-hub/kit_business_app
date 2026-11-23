@@ -464,11 +464,21 @@
       open: function (token, transactionId, environment) {
         try {
           if (!window.Paddle) return false;
-          if (window.Paddle.Environment && window.Paddle.Environment.set) {
-            window.Paddle.Environment.set(environment === 'sandbox' ? 'sandbox' : 'production');
+          if (!window.__ebooklivePaddleReady) {
+            if (window.Paddle.Environment && window.Paddle.Environment.set) {
+              window.Paddle.Environment.set(environment === 'sandbox' ? 'sandbox' : 'production');
+            }
+            window.Paddle.Initialize({ token: token });
+            window.__ebooklivePaddleReady = true;
           }
-          window.Paddle.Initialize({ token: token });
-          window.Paddle.Checkout.open({ transactionId: transactionId });
+          window.Paddle.Checkout.open({
+            transactionId: transactionId,
+            settings: {
+              displayMode: 'overlay',
+              theme: 'dark',
+              locale: 'fr'
+            }
+          });
           return true;
         } catch (error) {
           console.error('Paddle :', error);

@@ -34,6 +34,7 @@ import {
   environnementPaddle,
   priceIdPaddle,
   type TransactionPaddle,
+  verifierCoherencePaddle,
 } from "../_shared/paddle.ts";
 import { adminClient, utilisateurCourant } from "../_shared/supabase.ts";
 
@@ -62,6 +63,12 @@ serve(async (req) => {
   if (req.method !== "POST") return erreur("Méthode non autorisée.", 405);
 
   try {
+    const incoherencePaddle = verifierCoherencePaddle();
+    if (incoherencePaddle) {
+      console.error("create-paddle-checkout :", incoherencePaddle);
+      return erreur(incoherencePaddle, 500);
+    }
+
     const corps = (await req.json().catch(() => ({}))) as CorpsRequete;
 
     // ------------------------------------------------------------------

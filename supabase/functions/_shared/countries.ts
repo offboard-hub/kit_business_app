@@ -2,8 +2,8 @@
 //  RÉFÉRENTIEL MONDIAL DES PAYS, DEVISES ET ROUTES DE PAIEMENT — e-booklive
 //
 //  • 23 pays encaissés par SasPay dans leur devise locale (voir CODES_SASPAY).
-//  • Tous les autres pays passent par Paddle : EUR pour l'Europe et le Maghreb,
-//    USD partout ailleurs, avec une conversion locale purement indicative.
+//  • Tous les autres pays passent par Paddle en USD, avec une conversion
+//    locale purement indicative (USD par défaut pour tous les pays Paddle).
 //  • Les taux sont exprimés en « 1 XOF = X devise ». Ils sont identiques à
 //    `lib/core/countries.dart` (frontend) : toute modification doit être faite
 //    dans les deux fichiers.
@@ -14,7 +14,7 @@
 
 export type RoutePaiement = "saspay" | "paddle";
 
-/** Zone géographique — sert uniquement à choisir la devise Paddle. */
+/** Zone géographique — conservée pour le référentiel pays. */
 export type Zone =
   | "afriqueNord"
   | "afriqueOuest"
@@ -603,12 +603,12 @@ export function deviseLocale(code: string | null | undefined): string {
 }
 
 /**
- * Devise de facturation Paddle : EUR pour l'Europe et le Maghreb
+ * Devise de facturation Paddle : USD par défaut pour tous les pays Paddle.
  * (Maroc, Algérie, Tunisie, Libye, Égypte, Soudan), USD sinon.
  */
-export function devisePaddle(code: string | null | undefined): "EUR" | "USD" {
-  const zone = paysMonde(code)?.zone;
-  return zone === "europe" || zone === "afriqueNord" ? "EUR" : "USD";
+/** Devise Paddle : USD par défaut pour tous les pays hors SasPay. */
+export function devisePaddle(_code: string | null | undefined): "USD" {
+  return "USD";
 }
 
 /** Nom français du pays, ou le code brut si le pays est inconnu. */
@@ -621,7 +621,7 @@ export function indicatifPays(code: string | null | undefined): string {
   return paysMonde(code)?.indicatif ?? "";
 }
 
-/** Devise réellement facturée : locale (SasPay) ou EUR/USD (Paddle). */
+/** Devise réellement facturée : locale (SasPay) ou USD (Paddle). */
 export function deviseFacturation(code: string | null | undefined): string {
   return estPaysSasPay(code) ? deviseLocale(code) : devisePaddle(code);
 }

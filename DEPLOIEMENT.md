@@ -89,15 +89,15 @@ L'application n'écrit jamais de `.mp4` dans Supabase Storage (plan gratuit 1 Go
 | `SASPAY_BASE_URL` | ❌ | Défaut `https://api.saspay.me/api/v1` (utile pour un sandbox) |
 | `SASPAY_PAYMENT_LINK` | ❌ (legacy) | Ancien lien de paiement réutilisable — plus utilisé : les CTA pointent vers `/boutique` |
 | `PADDLE_API_KEY` | ✅ (hors 23 pays SasPay) | Clé API Paddle Billing (`pdl_live_...` ou `pdl_sdbx_...`) — developer.paddle.com |
-| `PADDLE_CLIENT_TOKEN` | ✅ (Paddle) | Jeton public utilisé par Paddle.js (`live_...` / `test_...`) |
+| `PADDLE_CLIENT_TOKEN` | ✅ (Paddle) | Jeton public Paddle.js (`live_...` / `test_...`). Alias accepté : `PADDLE_TOKEN_KIT`. |
 | `PADDLE_WEBHOOK_SECRET` | ✅ (Paddle) | Secret de signature du webhook Paddle (`pdl_ntfset_...`) |
-| `PADDLE_ENVIRONMENT` | ❌ | `production` (défaut) ou `sandbox` |
+| `PADDLE_ENVIRONNEMENT` | ✅ | `sandbox` ou `production` (nom historique français ; `PADDLE_ENVIRONMENT` accepté aussi). Aucun défaut : le checkout échoue si absent. |
 | `PADDLE_PRICE_KIT_PROMPT` | ✅ (Paddle) | Price ID du kit Prompts IA (USD) |
 | `PADDLE_PRICE_KIT_SHEET` | ✅ (Paddle) | Price ID du kit Sheet Automatisé (USD) |
 | `PADDLE_PRICE_KIT_LIVRE` | ✅ (Paddle) | Price ID du kit Livre Stratégique (USD) |
 | `PADDLE_PRICE_KIT_PACK` | ✅ (Paddle) | Price ID du Pack Complet (USD) |
 | `PADDLE_PRICE_STUDIO` | ✅ (Paddle) | Price ID de l'abonnement Studio Live (USD, 10 USD) |
-| `PADDLE_PRICE_*_EUR` | ❌ (optionnel) | Variantes EUR : si absentes, repli automatique sur les prix USD, avec alignement de la ligne sur la devise facturée par Paddle. |
+| `PADDLE_PRICE_*_EUR` | ❌ (obsolète) | Plus utilisées : Paddle facture en USD par défaut. |
 | `SITE_URL` | ✅ | URL publique du site **sans slash final**, ex. `https://e-booklive.offboard-hub.com` |
 | `WHATSAPP_AIDE_NUMBER` | ✅ | Numéro d'aide WhatsApp au format international **sans `+`**, ex. `22670123456` |
 | `RESEND_API_KEY` | ✅ | Clé API Resend (`re_...`) — resend.com/api-keys |
@@ -185,7 +185,7 @@ Fonctions déployées :
 | Fonction | Rôle |
 |---|---|
 | `saspay-checkout` | Crée la commande (kit) ou l'abonnement Studio + la session SasPay |
-| `create-paddle-checkout` | Crée la commande/abonnement + la transaction Paddle (EUR/USD) |
+| `create-paddle-checkout` | Crée la commande/abonnement + la transaction Paddle en USD |
 | `verify-payment` | Vérifie SasPay **ou** Paddle, livre le kit ou active le Studio |
 | `saspay-webhook` | Confirmation SasPay (signature HMAC) + livraison/activation idempotente |
 | `paddle-webhook` | Confirmation Paddle (signature `Paddle-Signature`) + livraison/activation |
@@ -210,8 +210,8 @@ le **Studio Live** (10 USD / 30 jours). Le routage du paiement est automatique :
 - **23 pays SasPay** (ML, SN, CI, BF, BJ, TG, NE, CM, GA, CG, CD, GN, NG, GH,
   SL, KE, UG, TZ, RW, MW, MZ, ZM, IN) → `saspay-checkout`, montant dans la
   devise locale.
-- **Tous les autres pays** → `create-paddle-checkout`, facturation **EUR**
-  (Europe + Maghreb) ou **USD**, conversion locale indicative.
+- **Tous les autres pays** → `create-paddle-checkout`, facturation **USD par
+  défaut**, conversion locale indicative.
 
 ### 4 bis.1 Migration à appliquer
 
@@ -227,18 +227,17 @@ supabase db push
 ### 4 bis.2 Secrets Paddle à définir
 
 ```bash
-supabase secrets set PADDLE_ENVIRONMENT=production
-supabase secrets set PADDLE_API_KEY=pdl_live_xxx
-supabase secrets set PADDLE_CLIENT_TOKEN=live_xxx
+supabase secrets set PADDLE_ENVIRONNEMENT=sandbox
+supabase secrets set PADDLE_API_KEY=pdl_sdbx_xxx
+supabase secrets set PADDLE_CLIENT_TOKEN=test_xxx
 supabase secrets set PADDLE_WEBHOOK_SECRET=pdl_ntfset_xxx
 ```
 
 ### 4 bis.3 Price IDs Paddle (Products → Prices)
 
-Créez dans Paddle un prix par offre, **en USD** (base) et, si vous le souhaitez,
-**en EUR** (variante `_EUR`) pour l'Europe et le Maghreb. Les variantes EUR sont
-**optionnelles** : si elles manquent, le serveur retombe sur le prix USD et aligne
-la ligne sur la devise réellement facturée par Paddle.
+Créez dans Paddle un **prix one-time par offre, en USD**. C'est la devise de
+facturation **par défaut pour tous les pays Paddle** ; les prix EUR ne sont plus
+utilisés.
 
 | Variable | Offre | Montant conseillé (USD) |
 |---|---|---|
@@ -248,9 +247,8 @@ la ligne sur la devise réellement facturée par Paddle.
 | `PADDLE_PRICE_KIT_PACK` | Pack Complet | 14,85 |
 | `PADDLE_PRICE_STUDIO` | Studio Live 30 jours | 10,00 |
 
-Variantes EUR **optionnelles** pour l'Europe/Maghreb : 4,57 / 5,34 / 7,62 / 13,72 / 9,24
-(`PADDLE_PRICE_KIT_*_EUR`, `PADDLE_PRICE_STUDIO_EUR`). Si une variante EUR est absente,
-le prix USD est utilisé et le montant final est aligné sur la devise facturée par Paddle.
+Les variantes `_EUR` sont **obsolètes** : ne les créez pas. Les montants locaux
+sont purement indicatifs ; Paddle débite le prix USD.
 
 > **Tous ces prix doivent être des prix one-time** (pas de facturation
 > récurrente) : le Studio Live est un accès de 30 jours géré par l'application,

@@ -3,8 +3,8 @@
 //
 //  • Tous les pays du monde (recherche instantanée + drapeaux).
 //  • 23 pays encaissés par SasPay dans leur devise locale.
-//  • Tous les autres pays passent par Paddle (EUR pour l'Europe et le Maghreb,
-//    USD ailleurs) avec une conversion locale indicative.
+//  • Tous les autres pays passent par Paddle en USD, avec une conversion
+//    locale purement indicative. USD par défaut pour tous les pays Paddle.
 //
 //  Les taux sont exprimés en « 1 XOF = X devise ». Ils sont volontairement
 //  simples à mettre à jour : une seule table `tauxXof` à ajuster.
@@ -304,9 +304,8 @@ class PaysMonde {
   /// Le pays est-il encaissé par SasPay dans sa devise locale ?
   final bool sasPay;
 
-  /// Devise de facturation Paddle : EUR (Europe + Maghreb) ou USD.
-  String get devisePaddle =>
-      (region == Region.europe || region == Region.afriqueNord) ? 'EUR' : 'USD';
+  /// Devise de facturation Paddle : USD par défaut pour tous les pays Paddle.
+  String get devisePaddle => 'USD';
 
   /// Devise réellement facturée pour ce pays.
   String get deviseFacturation => sasPay ? devise : devisePaddle;

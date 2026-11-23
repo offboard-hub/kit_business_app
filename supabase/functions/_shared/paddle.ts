@@ -14,10 +14,26 @@ import { estTypeProduit } from "./pricing.ts";
 
 export type EnvironnementPaddle = "sandbox" | "production";
 
-/** Environnement Paddle actif (sandbox par défaut en développement). */
+/** Environnement Paddle actif (sandbox ou production, explicitement requis). */
 export function environnementPaddle(): EnvironnementPaddle {
-  const brut = (Deno.env.get("PADDLE_ENVIRONMENT") ?? "production").trim().toLowerCase();
-  return brut === "sandbox" ? "sandbox" : "production";
+  // Le projet Supabase historique utilise le nom français `PADDLE_ENVIRONNEMENT` ;
+  // on accepte aussi le nom anglais standard `PADDLE_ENVIRONMENT`.
+  const brut = (Deno.env.get("PADDLE_ENVIRONNEMENT") ??
+    Deno.env.get("PADDLE_ENVIRONMENT") ??
+    "").trim().toLowerCase();
+
+  if (!brut) {
+    throw new Error(
+      "PADDLE_ENVIRONNEMENT n'est pas configuré. Renseignez 'sandbox' ou 'production' " +
+        "dans les secrets Supabase avant tout paiement Paddle.",
+    );
+  }
+  if (brut !== "sandbox" && brut !== "production") {
+    throw new Error(
+      `PADDLE_ENVIRONNEMENT invalide ('${brut}'). Valeurs acceptées : 'sandbox' ou 'production'.`,
+    );
+  }
+  return brut;
 }
 
 /** URL de base de l'API Paddle selon l'environnement. */
@@ -37,7 +53,38 @@ function cleApiPaddle(): string {
 
 /** Jeton public utilisé par Paddle.js pour ouvrir le checkout. */
 export function clientTokenPaddle(): string {
-  return (Deno.env.get("PADDLE_CLIENT_TOKEN") ?? "").trim();
+  return (Deno.env.get("PADDLE_CLIENT_TOKEN") ??
+    Deno.env.get("PADDLE_TOKEN_KIT") ??
+    "").trim();
+}
+
+/**
+ * Vérifie que les secrets Paddle sont cohérents entre eux.
+ * Empêche notamment un checkout sandbox avec une clé live (ou l'inverse).
+ * Ne renvoie jamais les valeurs des secrets.
+ */
+export function verifierCoherencePaddle(): string | null {
+  const environnement = environnementPaddle();
+  const apiKey = (Deno.env.get("PADDLE_API_KEY") ?? "").trim();
+  const token = clientTokenPaddle();
+
+  if (environnement === "sandbox") {
+    if (apiKey && !apiKey.startsWith("pdl_sdbx_")) {
+      return "Configuration Paddle incohérente : PADDLE_ENVIRONNEMENT=sandbox mais PADDLE_API_KEY n'est pas une clé sandbox (pdl_sdbx_…).";
+    }
+    if (token && !token.startsWith("test_")) {
+      return "Configuration Paddle incohérente : l'environnement sandbox exige un PADDLE_CLIENT_TOKEN (ou PADDLE_TOKEN_KIT) préfixé test_.";
+    }
+  } else {
+    if (apiKey && !apiKey.startsWith("pdl_live_")) {
+      return "Configuration Paddle incohérente : PADDLE_ENVIRONNEMENT=production mais PADDLE_API_KEY n'est pas une clé live (pdl_live_…).";
+    }
+    if (token && !token.startsWith("live_")) {
+      return "Configuration Paddle incohérente : l'environnement production exige un PADDLE_CLIENT_TOKEN (ou PADDLE_TOKEN_KIT) préfixé live_.";
+    }
+  }
+
+  return null;
 }
 
 interface ReponsePaddle {
