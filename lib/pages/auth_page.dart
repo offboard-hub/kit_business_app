@@ -104,7 +104,7 @@ class _AuthPageState extends State<AuthPage> {
                             const AppLogo(size: 64),
                             const SizedBox(height: 16),
                             const Text(
-                              'Votre espace Kit Business',
+                              'Votre espace e-booklive',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: K.sand, fontSize: 21, fontWeight: FontWeight.w900),
                             ),

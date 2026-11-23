@@ -42,6 +42,14 @@ export interface Commande {
   created_at: string;
   paid_at: string | null;
   delivered_at: string | null;
+  /** Prestataire de paiement : 'saspay' | 'paddle'. */
+  provider: string | null;
+  paddle_transaction_id: string | null;
+  /** Montant réellement facturé et sa devise (null pour les anciennes lignes). */
+  montant_local: number | null;
+  devise_locale: string | null;
+  /** 'kit' | 'studio' — seuls les kits sont livrés par cette fonction. */
+  kind: string | null;
 }
 
 export interface ResultatLivraison {
@@ -95,12 +103,21 @@ function resultatDepuisKit(commande: Commande, kit: Record<string, unknown>): Re
 /**
  * Génère le kit complet, enregistre les métadonnées texte, puis envoie
  * immédiatement les liens par email (Resend).
+ *
+ * Seuls les kits sont traités ici : les abonnements Studio Live passent par
+ * `activerAbonnementStudio` (voir _shared/studio.ts).
  */
-export async function livrerCommande(orderId: string): Promise<ResultatLivraison> {
+export async function livrerCommande(
+  orderId: string,
+  options: { metierLabel?: string } = {},
+): Promise<ResultatLivraison> {
   const admin = adminClient();
 
   let commande = await chargerCommande(orderId);
   if (!commande) throw new Error("Commande introuvable.");
+  if ((commande.kind ?? "kit") === "studio") {
+    throw new Error("Cette commande est un abonnement Studio Live, pas un kit.");
+  }
 
   // Déjà livrée : on renvoie les liens existants (rechargement de la page de confirmation).
   if (commande.statut === "LIVRE" && commande.kit_id) {
@@ -131,16 +148,17 @@ export async function livrerCommande(orderId: string): Promise<ResultatLivraison
   commande = verrou as Commande;
   const offre = OFFRES[commande.produit_type];
   const avertissements: string[] = [];
+  const metierLabel = options.metierLabel?.trim() || commande.metier_label || commande.metier_code;
 
   try {
     const contenu = await genererContenu(
       {
         metierCode: commande.metier_code,
-        metierLabel: commande.metier_label ?? commande.metier_code,
+        metierLabel,
         nomProjet: commande.nom_projet,
         paysCode: commande.pays_code,
         paysLabel: commande.pays_label ?? commande.pays_code,
-        devise: commande.devise,
+        devise: commande.devise_locale ?? commande.devise,
         precisions: commande.precisions,
         emailClient: commande.email,
       },
@@ -153,7 +171,7 @@ export async function livrerCommande(orderId: string): Promise<ResultatLivraison
       .insert({
         user_id: commande.user_id,
         order_id: commande.id,
-        secteur_client: commande.metier_label ?? commande.metier_code,
+        secteur_client: metierLabel,
         metier_code: commande.metier_code,
         nom_projet: commande.nom_projet,
         pays_code: commande.pays_code,
@@ -180,10 +198,16 @@ export async function livrerCommande(orderId: string): Promise<ResultatLivraison
 
     const htmlEmail = emailLivraisonHtml({
       nomProjet: commande.nom_projet,
-      metierLabel: commande.metier_label ?? commande.metier_code,
+      metierLabel,
       paysLabel: commande.pays_label ?? commande.pays_code,
       produit: commande.produit_type,
       liens,
+      paiement: {
+        provider: commande.provider,
+        montant: commande.montant_local,
+        devise: commande.devise_locale,
+        montantFcfa: commande.montant_fcfa,
+      },
     });
 
     const envoiEmail: ResultatEnvoi = commande.delivered_email

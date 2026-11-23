@@ -1,4 +1,4 @@
-# 🚀 Déploiement — Kit Business (Afrique francophone, 100 % FCFA)
+# Déploiement — e-booklive (kits FCFA + paiement international Paddle)
 
 Ce guide couvre **tout ce qui est nécessaire pour mettre le projet en production** :
 base de données, secrets Supabase, déploiement des Edge Functions, configuration
@@ -32,6 +32,8 @@ Dans **Supabase → SQL Editor**, exécutez les migrations **dans cet ordre** :
 3. `supabase/migrations/20260101000200_avis_site.sql`
 4. `supabase/migrations/20260101000300_suppression_livraison_whatsapp.sql`
 5. `supabase/migrations/20260101000400_tiktok_oauth.sql`
+6. `supabase/migrations/20260101000500_paddle_et_studio_live.sql`
+7. `supabase/migrations/20260101000600_studio_essai_gratuit.sql`
 
 Ou en ligne de commande :
 
@@ -59,6 +61,13 @@ where email = 'votre-email@exemple.com';
 `Confirm email`. L'utilisateur est connecté immédiatement après l'inscription.
 L'email d'accueil (`welcome-email`) est **informatif** et ne contient aucun lien de confirmation.
 
+> 🔐 **Choix de sécurité à assumer** : l'accès à la régie Studio Live d'un acheteur
+> invité se fait par correspondance d'email (`studio_subscriptions.email` =
+> email du JWT). Sans confirmation d'email, un tiers pourrait revendiquer un
+> abonnement acheté en invité s'il crée un compte avec le même email avant le
+> client. Pour une mise en production stricte, **activez `Confirm email`** ou
+> liez systématiquement l'achat à un compte connecté. Voir `docs/REVUE_DB.md` (F03).
+
 ### 2.3 Vérifier qu'aucun bucket vidéo n'existe
 
 **Supabase → Storage** : ne créez **aucun** bucket pour les vidéos.
@@ -78,11 +87,21 @@ L'application n'écrit jamais de `.mp4` dans Supabase Storage (plan gratuit 1 Go
 | `SASPAY_API_KEY` | ✅ | Clé SasPay `sk_live_...` (ou `sk_test_...` en test) — app.saspay.me → Développeur |
 | `SASPAY_WEBHOOK_SECRET` | ✅ (recommandé) | `signing_secret` affiché à la création du webhook SasPay |
 | `SASPAY_BASE_URL` | ❌ | Défaut `https://api.saspay.me/api/v1` (utile pour un sandbox) |
-| `SASPAY_PAYMENT_LINK` | ❌ | Lien de paiement SasPay réutilisable, utilisé comme CTA par l'assistant IA |
+| `SASPAY_PAYMENT_LINK` | ❌ (legacy) | Ancien lien de paiement réutilisable — plus utilisé : les CTA pointent vers `/boutique` |
+| `PADDLE_API_KEY` | ✅ (hors 23 pays SasPay) | Clé API Paddle Billing (`pdl_live_...` ou `pdl_sdbx_...`) — developer.paddle.com |
+| `PADDLE_CLIENT_TOKEN` | ✅ (Paddle) | Jeton public utilisé par Paddle.js (`live_...` / `test_...`) |
+| `PADDLE_WEBHOOK_SECRET` | ✅ (Paddle) | Secret de signature du webhook Paddle (`pdl_ntfset_...`) |
+| `PADDLE_ENVIRONMENT` | ❌ | `production` (défaut) ou `sandbox` |
+| `PADDLE_PRICE_KIT_PROMPT` | ✅ (Paddle) | Price ID du kit Prompts IA (USD) |
+| `PADDLE_PRICE_KIT_SHEET` | ✅ (Paddle) | Price ID du kit Sheet Automatisé (USD) |
+| `PADDLE_PRICE_KIT_LIVRE` | ✅ (Paddle) | Price ID du kit Livre Stratégique (USD) |
+| `PADDLE_PRICE_KIT_PACK` | ✅ (Paddle) | Price ID du Pack Complet (USD) |
+| `PADDLE_PRICE_STUDIO` | ✅ (Paddle) | Price ID de l'abonnement Studio Live (USD, 10 USD) |
+| `PADDLE_PRICE_*_EUR` | ❌ (optionnel) | Variantes EUR : si absentes, repli automatique sur les prix USD, avec alignement de la ligne sur la devise facturée par Paddle. |
 | `SITE_URL` | ✅ | URL publique du site **sans slash final**, ex. `https://e-booklive.offboard-hub.com` |
 | `WHATSAPP_AIDE_NUMBER` | ✅ | Numéro d'aide WhatsApp au format international **sans `+`**, ex. `22670123456` |
 | `RESEND_API_KEY` | ✅ | Clé API Resend (`re_...`) — resend.com/api-keys |
-| `RESEND_FROM_EMAIL` | ✅ | Expéditeur vérifié, ex. `Kit Business <bonjour@votre-domaine.com>` |
+| `RESEND_FROM_EMAIL` | ✅ | Expéditeur vérifié, ex. `e-booklive <bonjour@votre-domaine.com>` |
 | `SUPPORT_EMAIL` | ❌ | Adresse de réponse (`reply_to`) des emails |
 | `DEEPSEEK_API_KEY` | ✅ | platform.deepseek.com — stratégie, prompts, assistant, copy vidéo |
 | `DEEPSEEK_MODEL` | ❌ | Défaut `deepseek-chat` |
@@ -126,7 +145,7 @@ supabase secrets set \
   SITE_URL=https://e-booklive.offboard-hub.com \
   WHATSAPP_AIDE_NUMBER=22670123456 \
   RESEND_API_KEY=re_xxxxxxxx \
-  RESEND_FROM_EMAIL="Kit Business <bonjour@votre-domaine.com>" \
+  RESEND_FROM_EMAIL="e-booklive <bonjour@votre-domaine.com>" \
   DEEPSEEK_API_KEY=sk-xxxxxxxx \
   GEMINI_API_KEY=xxxxxxxx \
   CRON_SECRET=une-chaine-aleatoire-longue
@@ -154,7 +173,9 @@ vérifie elle-même l'identité) :
 
 ```bash
 for f in generate-kit verify-payment view-kit saspay-checkout saspay-webhook \
-         welcome-email site-assistant youtube-live-bot video-agency-pipeline tiktok-auth; do
+         create-paddle-checkout paddle-webhook generate-live-guide live-auto-chat \
+         studio-room admin-check welcome-email site-assistant youtube-live-bot \
+         video-agency-pipeline tiktok-auth; do
   supabase functions deploy "$f" --no-verify-jwt
 done
 ```
@@ -163,9 +184,14 @@ Fonctions déployées :
 
 | Fonction | Rôle |
 |---|---|
-| `saspay-checkout` | Crée la commande + la session de paiement SasPay |
-| `verify-payment` | Vérifie le paiement et déclenche génération + livraison |
-| `saspay-webhook` | Confirmation fiable (signature HMAC) + livraison idempotente |
+| `saspay-checkout` | Crée la commande (kit) ou l'abonnement Studio + la session SasPay |
+| `create-paddle-checkout` | Crée la commande/abonnement + la transaction Paddle (EUR/USD) |
+| `verify-payment` | Vérifie SasPay **ou** Paddle, livre le kit ou active le Studio |
+| `saspay-webhook` | Confirmation SasPay (signature HMAC) + livraison/activation idempotente |
+| `paddle-webhook` | Confirmation Paddle (signature `Paddle-Signature`) + livraison/activation |
+| `generate-live-guide` | Génère le Livre Guide Live (JWT propriétaire requis) |
+| `live-auto-chat` | Chat IA « Awa » du live (DeepSeek) + historique des messages |
+| `studio-room` | Session publique minimale d'une salle live (jeton d'invitation / JWT) |
 | `generate-kit` | Régénération manuelle du kit avec crédits |
 | `view-kit` | Page de consultation / téléchargement PDF, protégée par jeton |
 | `welcome-email` | Email d'accueil Resend (sans confirmation) |
@@ -176,7 +202,138 @@ Fonctions déployées :
 
 ---
 
-## 5. Configurer SasPay (paiement exclusif)
+## 4 bis. Refonte e-booklive — Paddle & Studio Live
+
+Cette refonte ajoute **deux univers** : La Boutique (kits, paiement unique) et
+le **Studio Live** (10 USD / 30 jours). Le routage du paiement est automatique :
+
+- **23 pays SasPay** (ML, SN, CI, BF, BJ, TG, NE, CM, GA, CG, CD, GN, NG, GH,
+  SL, KE, UG, TZ, RW, MW, MZ, ZM, IN) → `saspay-checkout`, montant dans la
+  devise locale.
+- **Tous les autres pays** → `create-paddle-checkout`, facturation **EUR**
+  (Europe + Maghreb) ou **USD**, conversion locale indicative.
+
+### 4 bis.1 Migration à appliquer
+
+`supabase/migrations/20260101000500_paddle_et_studio_live.sql` (idempotente) :
+colonnes Paddle sur `orders`, tables `studio_subscriptions`, `studio_guides`,
+`studio_live_sessions`, `studio_live_messages`, RLS, temps réel et fonctions
+`studio_a_acces`, `mon_abonnement_studio`, `studio_session_publique`.
+
+```bash
+supabase db push
+```
+
+### 4 bis.2 Secrets Paddle à définir
+
+```bash
+supabase secrets set PADDLE_ENVIRONMENT=production
+supabase secrets set PADDLE_API_KEY=pdl_live_xxx
+supabase secrets set PADDLE_CLIENT_TOKEN=live_xxx
+supabase secrets set PADDLE_WEBHOOK_SECRET=pdl_ntfset_xxx
+```
+
+### 4 bis.3 Price IDs Paddle (Products → Prices)
+
+Créez dans Paddle un prix par offre, **en USD** (base) et, si vous le souhaitez,
+**en EUR** (variante `_EUR`) pour l'Europe et le Maghreb. Les variantes EUR sont
+**optionnelles** : si elles manquent, le serveur retombe sur le prix USD et aligne
+la ligne sur la devise réellement facturée par Paddle.
+
+| Variable | Offre | Montant conseillé (USD) |
+|---|---|---|
+| `PADDLE_PRICE_KIT_PROMPT` | Prompts IA | 4,95 |
+| `PADDLE_PRICE_KIT_SHEET` | Sheet Automatisé | 5,78 |
+| `PADDLE_PRICE_KIT_LIVRE` | Livre Stratégique | 8,25 |
+| `PADDLE_PRICE_KIT_PACK` | Pack Complet | 14,85 |
+| `PADDLE_PRICE_STUDIO` | Studio Live 30 jours | 10,00 |
+
+Variantes EUR **optionnelles** pour l'Europe/Maghreb : 4,57 / 5,34 / 7,62 / 13,72 / 9,24
+(`PADDLE_PRICE_KIT_*_EUR`, `PADDLE_PRICE_STUDIO_EUR`). Si une variante EUR est absente,
+le prix USD est utilisé et le montant final est aligné sur la devise facturée par Paddle.
+
+> **Tous ces prix doivent être des prix one-time** (pas de facturation
+> récurrente) : le Studio Live est un accès de 30 jours géré par l'application,
+> pas un abonnement Paddle. Un prix récurrent créerait un second prélèvement
+> que l'application ne suivrait pas.
+
+> Sans `PADDLE_PRICE_KIT_*`, `create-paddle-checkout` renvoie une erreur
+> explicite en français : c'est volontaire (aucun paiement au mauvais prix).
+
+### 4 bis.4 Webhook Paddle à configurer
+
+Dans **Paddle → Developer Tools → Notifications**, créez une destination :
+
+```
+https://<project-ref>.supabase.co/functions/v1/paddle-webhook
+```
+
+Événements à cocher :
+
+- `transaction.completed`
+- `transaction.paid`
+- `transaction.payment_failed`
+- `transaction.canceled`
+
+Copiez le secret de signature dans `PADDLE_WEBHOOK_SECRET` (fenêtre de 300 s,
+signature `Paddle-Signature: ts=…;h1=…`).
+
+### 4 bis.5 Webhook SasPay (inchangé, étendu au Studio)
+
+La destination existante `…/functions/v1/saspay-webhook` traite désormais les
+kits **et** les abonnements Studio Live (`metadata.subscription_id`, `kind`).
+Événements à conserver : `transaction.success`, `transaction.failed`,
+`transaction.cancelled`.
+
+### 4 bis.5 bis Essai gratuit Studio Live (3 jours)
+
+L'essai est **applicatif** : aucun prix d'essai n'est créé chez Paddle ou SasPay,
+aucune carte n'est demandée et aucun prélèvement automatique n'a lieu.
+
+- Migration : `supabase/migrations/20260101000600_studio_essai_gratuit.sql`.
+- Table `studio_trials` (un seul essai par utilisateur, `ends_at = started_at + 3 jours`).
+- RPC `public.demarrer_essai_studio()` : `auth.uid()` requis, **email confirmé**
+  (`auth.users.email_confirmed_at`) requis, un seul essai, jamais prolongeable.
+- Accès régie = abonnement payé actif **ou** essai non expiré.
+- Pendant l'essai : chat IA limité à **20 réponses par jour** ; le Livre Guide et
+  les guides restent réservés aux abonnements payés.
+- À l'expiration : la régie affiche « Votre essai est terminé » et le bouton
+  d'abonnement ; la salle n'est plus publique et le chat est fermé.
+
+> Sans confirmation d'email activée dans Supabase, l'essai restera refusé
+> (`P0002`). Activez `Confirm email` ou utilisez un compte déjà confirmé.
+
+### 4 bis.6 Routes Flutter concernées
+
+| Route | Usage |
+|---|---|
+| `/boutique` | Kits métiers, choix du secteur et du pays |
+| `/studio-live` | Essai 3 jours + abonnement Studio Live (10 USD / 30 jours) |
+| `/?commande=<id>` | Retour SasPay/Paddle pour un kit (`verify-payment`) |
+| `/studio-live?abonnement=<id>` | Paiement Studio en attente (`verify-payment`) |
+| `/studio/regie` | Régie de l'abonné (sessions, chat, guide) |
+| `/live/:roomId?invite=<token>` | Salle publique / co-animateur (`studio-room`) |
+| `/guide` | Guide & Tutoriel public |
+
+Le site doit servir ces URLs en **path** (plus de `/#/`) : réécriture SPA vers
+`index.html` côté Netlify.
+
+### 4 bis.7 Vérifications rapides
+
+```bash
+# Refus attendu : signature Paddle absente → 401
+curl -i -X POST "https://<project-ref>.supabase.co/functions/v1/paddle-webhook" \
+  -H "Content-Type: application/json" -d '{}'
+
+# Refus attendu : pays Paddle envoyé à saspay-checkout → message explicite
+curl -s -X POST "https://<project-ref>.supabase.co/functions/v1/saspay-checkout" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"kit","metier_code":"ecommerce","nom_projet":"Test","pays_code":"MA","whatsapp":"600000000","email":"test@example.com","produit_type":"pack"}'
+```
+
+---
+
+## 5. Configurer SasPay (23 pays, devise locale)
 
 1. **app.saspay.me → Développeur** : créez une clé `sk_test_...` puis `sk_live_...`.
 2. Renseignez `SASPAY_API_KEY`.
@@ -189,8 +346,10 @@ Fonctions déployées :
    ouvre `checkout_url`, puis `verify-payment` vérifie
    `GET /payments/{payment_id}/verify/` — **seul `SUCCESS` autorise la livraison**.
 
-> YouCan Pay, Paddle et PaySaS ne sont plus utilisés. Si d'anciennes clés existent
-> dans vos secrets Supabase, supprimez-les : `supabase secrets unset YOUCAN_*`.
+> YouCan Pay et PaySaS ne sont plus utilisés. Paddle reste utilisé pour les pays
+> hors SasPay (voir §4 bis) : les deux prestataires coexistent désormais. Si
+> d'anciennes clés YouCan Pay existent dans vos secrets Supabase, supprimez-les :
+> `supabase secrets unset YOUCAN_*`.
 
 ---
 
@@ -342,8 +501,9 @@ Le fichier `netlify.toml` est déjà prêt (plugin Flutter, `build/web`).
 4. Vérifiez que `SITE_URL` (secret Supabase) est **identique** à l'URL Netlify :
    c'est l'URL de retour SasPay (`/?commande=...`).
 
-> Le routage utilise le *hash* Flutter (`/#/commande`, `/#/admin-videos`) :
-> aucune redirection SPA n'est nécessaire sur Netlify.
+> Le routage utilise des **paths** (`/boutique`, `/studio-live`, `/guide`,
+> `/studio/regie`, `/live/:roomId`) : la réécriture SPA de `netlify.toml`
+> renvoie toutes les URLs vers `index.html`.
 
 ---
 

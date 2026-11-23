@@ -1,8 +1,9 @@
 # ============================================================================
-#  Configuration des Edge Functions — Kit Business
+#  Configuration des Edge Functions — e-booklive
 #  L'authentification est vérifiée DANS chaque fonction (JWT Supabase, rôle
-#  admin, secret de cron ou signature SasPay), d'où verify_jwt = false
-#  pour permettre aussi les appels publics légitimes (webhooks, retour SasPay).
+#  admin, secret de cron, signature SasPay ou signature Paddle), d'où
+#  verify_jwt = false pour permettre aussi les appels publics légitimes
+#  (webhooks, retours de paiement, salle de live publique).
 # ============================================================================
 
 project_id = "ynephuutnazdnjhsdlsy"
@@ -29,6 +30,31 @@ entrypoint = "./functions/view-kit/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/saspay-checkout/index.ts"
+
+[functions.create-paddle-checkout]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/create-paddle-checkout/index.ts"
+
+[functions.paddle-webhook]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/paddle-webhook/index.ts"
+
+[functions.generate-live-guide]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/generate-live-guide/index.ts"
+
+[functions.live-auto-chat]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/live-auto-chat/index.ts"
+
+[functions.studio-room]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/studio-room/index.ts"
 
 [functions.saspay-webhook]
 enabled = true
@@ -59,3 +85,8 @@ entrypoint = "./functions/video-agency-pipeline/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/tiktok-auth/index.ts"
+
+[functions.admin-check]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/admin-check/index.ts"

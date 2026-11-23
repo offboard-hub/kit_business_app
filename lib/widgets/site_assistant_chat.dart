@@ -2,21 +2,16 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../core/config.dart';
-import '../core/links.dart';
+import '../core/app_state.dart';
 import '../core/theme.dart';
-import '../services/api.dart';
 import 'whatsapp.dart';
 
-class _Message {
-  const _Message({required this.texte, required this.assistant});
-
-  final String texte;
-  final bool assistant;
-}
-
-/// Bulle de chat IA du site — répond aux questions des spectateurs des Lives
-/// OBS et les redirige vers le lien d'achat SasPay.
+/// ============================================================================
+///  ASSISTANT IA DU SITE — bulle flottante discrète (bas droite).
+///  La conversation est partagée avec la vue pleine page : « Ouvrir en pleine
+///  interface » pousse `/assistant`, et « Retour au site » revient exactement
+///  où l'utilisateur était (la page précédente garde son état).
+/// ============================================================================
 class SiteAssistantChat extends StatefulWidget {
   const SiteAssistantChat({super.key, this.afficherWhatsApp = true});
 
@@ -29,25 +24,8 @@ class SiteAssistantChat extends StatefulWidget {
 class _SiteAssistantChatState extends State<SiteAssistantChat> {
   final TextEditingController _saisie = TextEditingController();
   final ScrollController _defilement = ScrollController();
-  final String _idConversation = 'web-${DateTime.now().microsecondsSinceEpoch}';
-
-  final List<_Message> _messages = [
-    const _Message(
-      texte:
-          'Bonjour 👋 Je suis Awa, l\'assistante Kit Business. Je vous aide à choisir le kit adapté à votre métier. Quel est votre secteur ?',
-      assistant: true,
-    ),
-  ];
-
-  List<String> _suggestions = const [
-    'Quel kit pour un maquis ?',
-    'Combien coûte le Pack Complet ?',
-    'Comment je reçois mon kit ?',
-  ];
-
-  String? _cta;
+  final AssistantState _etat = AssistantState.instance;
   bool _ouvert = false;
-  bool _chargement = false;
 
   @override
   void dispose() {
@@ -56,52 +34,23 @@ class _SiteAssistantChatState extends State<SiteAssistantChat> {
     super.dispose();
   }
 
+  Future<void> _envoyer([String? texteForce]) async {
+    final texte = (texteForce ?? _saisie.text).trim();
+    if (texte.isEmpty) return;
+    _saisie.clear();
+    await _etat.envoyer(texte);
+    _defiler();
+  }
+
   void _defiler() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_defilement.hasClients) return;
       _defilement.animateTo(
-        _defilement.position.maxScrollExtent + 80,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOut,
+        _defilement.position.maxScrollExtent + 90,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
       );
     });
-  }
-
-  Future<void> _envoyer([String? texteForce]) async {
-    final texte = (texteForce ?? _saisie.text).trim();
-    if (texte.isEmpty || _chargement) return;
-
-    setState(() {
-      _messages.add(_Message(texte: texte, assistant: false));
-      _saisie.clear();
-      _chargement = true;
-    });
-    _defiler();
-
-    try {
-      final reponse = await ApiService.assistant(message: texte, conversationId: _idConversation);
-      if (!mounted) return;
-      setState(() {
-        _messages.add(_Message(texte: reponse.reply, assistant: true));
-        _chargement = false;
-        if (reponse.suggestions.isNotEmpty) _suggestions = reponse.suggestions;
-        _cta = reponse.ctaUrl;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _messages.add(
-          const _Message(
-            texte:
-                'Je n\'arrive pas à répondre pour le moment. Choisissez votre kit directement ou écrivez-nous sur WhatsApp, nous répondons vite.',
-            assistant: true,
-          ),
-        );
-        _chargement = false;
-        _cta = AppConfig.lienCommande;
-      });
-    }
-    _defiler();
   }
 
   @override
@@ -109,173 +58,227 @@ class _SiteAssistantChatState extends State<SiteAssistantChat> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (_ouvert) ...[
-          _panneau(context),
+      children: <Widget>[
+        if (_ouvert) ...<Widget>[
+          _Panneau(
+            etat: _etat,
+            saisie: _saisie,
+            defilement: _defilement,
+            onEnvoyer: _envoyer,
+            onFermer: () => setState(() => _ouvert = false),
+            onPleinEcran: () {
+              setState(() => _ouvert = false);
+              Navigator.pushNamed(context, '/assistant');
+            },
+          ),
           const SizedBox(height: 10),
         ],
         Row(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.afficherWhatsApp && !_ouvert) ...[
+          children: <Widget>[
+            if (widget.afficherWhatsApp && !_ouvert) ...<Widget>[
               const WhatsAppFlottant(),
               const SizedBox(width: 10),
             ],
-            FloatingActionButton(
-              heroTag: 'assistant-ia',
-              backgroundColor: K.gold,
-              foregroundColor: K.night,
-              tooltip: _ouvert ? 'Fermer l\'assistant' : 'Poser une question',
-              onPressed: () => setState(() => _ouvert = !_ouvert),
-              child: Icon(_ouvert ? Icons.close_rounded : Icons.auto_awesome_rounded),
+            _BulleAssistant(
+              ouvert: _ouvert,
+              onTap: () {
+                setState(() => _ouvert = !_ouvert);
+                if (_ouvert) _defiler();
+              },
             ),
           ],
         ),
       ],
     );
   }
+}
 
-  Widget _panneau(BuildContext context) {
+class _BulleAssistant extends StatefulWidget {
+  const _BulleAssistant({required this.ouvert, required this.onTap});
+
+  final bool ouvert;
+  final VoidCallback onTap;
+
+  @override
+  State<_BulleAssistant> createState() => _BulleAssistantState();
+}
+
+class _BulleAssistantState extends State<_BulleAssistant> {
+  bool _survol = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _survol = true),
+      onExit: (_) => setState(() => _survol = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: widget.ouvert ? K.direct : K.marque,
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: (widget.ouvert ? K.emeraude : K.or)
+                    .withValues(alpha: _survol ? 0.5 : 0.32),
+                blurRadius: _survol ? 30 : 22,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Icon(
+            widget.ouvert ? Icons.close_rounded : Icons.auto_awesome_rounded,
+            color: K.bg,
+            size: 26,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Panneau extends StatelessWidget {
+  const _Panneau({
+    required this.etat,
+    required this.saisie,
+    required this.defilement,
+    required this.onEnvoyer,
+    required this.onFermer,
+    required this.onPleinEcran,
+  });
+
+  final AssistantState etat;
+  final TextEditingController saisie;
+  final ScrollController defilement;
+  final Future<void> Function([String? texte]) onEnvoyer;
+  final VoidCallback onFermer;
+  final VoidCallback onPleinEcran;
+
+  @override
+  Widget build(BuildContext context) {
     final taille = MediaQuery.sizeOf(context);
-    final largeur = math.min(taille.width - 28, 372.0);
-    final hauteur = math.min(taille.height * 0.62, 486.0);
+    final largeur = math.min(taille.width - 28, 390.0);
+    final hauteur = math.min(taille.height * 0.68, 560.0);
 
     return Container(
       width: largeur,
       height: hauteur,
       decoration: BoxDecoration(
-        color: K.night,
+        color: K.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: K.gold.withValues(alpha: 0.35)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: const Offset(0, 12))],
+        border: Border.all(color: K.borderLight),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.55),
+            blurRadius: 40,
+            offset: const Offset(0, 18),
+          ),
+        ],
       ),
       child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 8, 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(gradient: K.or, shape: BoxShape.circle),
-                  alignment: Alignment.center,
-                  child: const Text('A', style: TextStyle(color: K.night, fontWeight: FontWeight.w900, fontSize: 18)),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Awa · Assistante IA',
-                        style: TextStyle(color: K.sand, fontWeight: FontWeight.w800, fontSize: 14),
-                      ),
-                      Row(
-                        children: [
-                          Icon(Icons.circle, size: 8, color: K.green),
-                          SizedBox(width: 5),
-                          Text('En ligne · répond en quelques secondes',
-                              style: TextStyle(color: K.mist, fontSize: 10.5)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => setState(() => _ouvert = false),
-                  icon: const Icon(Icons.close_rounded, color: K.mist, size: 20),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: Colors.white12),
+        children: <Widget>[
+          _EnTete(onFermer: onFermer, onPleinEcran: onPleinEcran),
+          const Divider(height: 1, color: K.border),
           Expanded(
-            child: ListView.builder(
-              controller: _defilement,
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-              itemCount: _messages.length + (_chargement ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index >= _messages.length) return _bulleChargement();
-                return _bulle(_messages[index]);
+            child: ListenableBuilder(
+              listenable: etat,
+              builder: (context, _) {
+                return ListView.builder(
+                  controller: defilement,
+                  padding: const EdgeInsets.fromLTRB(13, 13, 13, 6),
+                  itemCount: etat.messages.length + (etat.chargement ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index >= etat.messages.length) return const _Chargement();
+                    return _Bulle(message: etat.messages[index]);
+                  },
+                );
               },
             ),
           ),
-          if (_suggestions.isNotEmpty && !_chargement)
-            SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: _suggestions.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (context, index) {
-                  final suggestion = _suggestions[index];
-                  return ActionChip(
-                    label: Text(suggestion, style: const TextStyle(fontSize: 11, color: K.gold)),
-                    backgroundColor: K.deep,
-                    side: BorderSide(color: K.gold.withValues(alpha: 0.3)),
-                    onPressed: () => _envoyer(suggestion),
-                  );
-                },
-              ),
-            ),
-          if (_cta != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 40,
-                child: ElevatedButton.icon(
-                  onPressed: () => ouvrirLienAvecRetour(context, _cta!),
-                  icon: const Icon(Icons.rocket_launch_rounded, size: 17, color: K.night),
-                  label: const Text(
-                    'Choisir mon kit (dès 3 000 FCFA)',
-                    style: TextStyle(color: K.night, fontWeight: FontWeight.w800, fontSize: 12.5),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: K.gold,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+          ListenableBuilder(
+            listenable: etat,
+            builder: (context, _) {
+              if (etat.chargement || etat.suggestions.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return SizedBox(
+                height: 38,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: etat.suggestions.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 6),
+                  itemBuilder: (context, index) {
+                    final suggestion = etat.suggestions[index];
+                    return ActionChip(
+                      label: Text(
+                        suggestion,
+                        style: const TextStyle(fontSize: 10.5, color: K.or),
+                      ),
+                      backgroundColor: K.bg.withValues(alpha: 0.6),
+                      side: BorderSide(color: K.or.withValues(alpha: 0.24)),
+                      onPressed: () => onEnvoyer(suggestion),
+                    );
+                  },
                 ),
-              ),
-            ),
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
             child: Row(
-              children: [
+              children: <Widget>[
                 Expanded(
                   child: TextField(
-                    controller: _saisie,
-                    style: const TextStyle(color: K.sand, fontSize: 13.5),
+                    controller: saisie,
+                    style: const TextStyle(color: K.text, fontSize: 13),
                     textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _envoyer(),
+                    onSubmitted: (_) => onEnvoyer(),
                     decoration: InputDecoration(
                       hintText: 'Posez votre question…',
-                      hintStyle: TextStyle(color: K.mist.withValues(alpha: 0.6), fontSize: 13),
+                      hintStyle: const TextStyle(color: K.faint, fontSize: 12.5),
                       filled: true,
-                      fillColor: K.deep.withValues(alpha: 0.8),
+                      fillColor: K.bg.withValues(alpha: 0.55),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+                        borderRadius: BorderRadius.circular(22),
+                        borderSide: const BorderSide(color: K.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(22),
+                        borderSide: const BorderSide(color: K.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(22),
+                        borderSide: const BorderSide(color: K.or, width: 1.3),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  width: 42,
-                  height: 42,
-                  child: ElevatedButton(
-                    onPressed: _chargement ? null : () => _envoyer(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: K.gold,
-                      padding: EdgeInsets.zero,
-                      shape: const CircleBorder(),
+                  width: 40,
+                  height: 40,
+                  child: Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => onEnvoyer(),
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: K.orGradient,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.arrow_upward_rounded, color: K.bg, size: 20),
+                      ),
                     ),
-                    child: const Icon(Icons.send_rounded, color: K.night, size: 19),
                   ),
                 ),
               ],
@@ -285,52 +288,127 @@ class _SiteAssistantChatState extends State<SiteAssistantChat> {
       ),
     );
   }
+}
 
-  Widget _bulle(_Message message) {
+class _EnTete extends StatelessWidget {
+  const _EnTete({required this.onFermer, required this.onPleinEcran});
+
+  final VoidCallback onFermer;
+  final VoidCallback onPleinEcran;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 10),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 38,
+            height: 38,
+            decoration: const BoxDecoration(gradient: K.marque, shape: BoxShape.circle),
+            child: const Icon(Icons.auto_awesome_rounded, color: K.bg, size: 19),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Awa · Assistante e-booklive',
+                  style: TextStyle(
+                    color: K.text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Row(
+                  children: <Widget>[
+                    Icon(Icons.circle, size: 6, color: K.emeraude),
+                    SizedBox(width: 5),
+                    Text(
+                      'En ligne · réponse en quelques secondes',
+                      style: TextStyle(color: K.faint, fontSize: 9.5),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Plein écran',
+            onPressed: onPleinEcran,
+            icon: const Icon(Icons.open_in_full_rounded, color: K.muted, size: 18),
+          ),
+          IconButton(
+            tooltip: 'Fermer',
+            onPressed: onFermer,
+            icon: const Icon(Icons.close_rounded, color: K.muted, size: 19),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Bulle extends StatelessWidget {
+  const _Bulle({required this.message});
+
+  final MessageAssistant message;
+
+  @override
+  Widget build(BuildContext context) {
+    final assistant = message.assistant;
     return Align(
-      alignment: message.assistant ? Alignment.centerLeft : Alignment.centerRight,
+      alignment: assistant ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 280),
+        constraints: const BoxConstraints(maxWidth: 292),
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
         decoration: BoxDecoration(
-          color: message.assistant ? K.deep : K.gold,
+          color: assistant ? K.bg.withValues(alpha: 0.6) : K.or.withValues(alpha: 0.14),
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(message.assistant ? 4 : 16),
-            bottomRight: Radius.circular(message.assistant ? 16 : 4),
+            topLeft: const Radius.circular(15),
+            topRight: const Radius.circular(15),
+            bottomLeft: Radius.circular(assistant ? 4 : 15),
+            bottomRight: Radius.circular(assistant ? 15 : 4),
           ),
-          border: message.assistant ? Border.all(color: K.gold.withValues(alpha: 0.2)) : null,
+          border: Border.all(
+            color: assistant ? K.border : K.or.withValues(alpha: 0.28),
+          ),
         ),
         child: Text(
           message.texte,
           style: TextStyle(
-            color: message.assistant ? K.sand : K.night,
-            fontSize: 13,
-            height: 1.45,
-            fontWeight: message.assistant ? FontWeight.w400 : FontWeight.w600,
+            color: assistant ? K.text : K.orSoft,
+            fontSize: 12.5,
+            height: 1.5,
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _bulleChargement() {
+class _Chargement extends StatelessWidget {
+  const _Chargement();
+
+  @override
+  Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: K.deep,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: K.gold.withValues(alpha: 0.2)),
+          color: K.bg.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: K.border),
         ),
         child: const SizedBox(
-          width: 16,
-          height: 16,
-          child: CircularProgressIndicator(color: K.gold, strokeWidth: 2),
+          width: 15,
+          height: 15,
+          child: CircularProgressIndicator(color: K.or, strokeWidth: 2),
         ),
       ),
     );

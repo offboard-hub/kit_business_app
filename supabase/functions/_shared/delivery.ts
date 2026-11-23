@@ -5,6 +5,7 @@
 // ============================================================================
 
 import { SITE_URL, formaterFcfa, lienAideWhatsApp, OFFRES, type TypeProduit } from "./config.ts";
+import { formaterMontant } from "./pricing.ts";
 import { type LiensKit } from "./kit-engine.ts";
 
 export interface ResultatEnvoi {
@@ -12,6 +13,28 @@ export interface ResultatEnvoi {
   id?: string;
   error?: string;
   canal: "email";
+}
+
+export interface PaiementEmail {
+  provider?: string | null;
+  montant?: number | null;
+  devise?: string | null;
+  montantFcfa?: number | null;
+}
+
+/** Ligne « Payé via SasPay — 23 000 NGN » (ou montant FCFA de référence). */
+function lignePaiement(paiement: PaiementEmail | undefined): string {
+  if (!paiement) return "";
+  const fournisseur = (paiement.provider ?? "").toLowerCase() === "paddle"
+    ? "Paddle"
+    : "SasPay";
+  if (paiement.montant && paiement.devise) {
+    return `Payé via ${fournisseur} — ${formaterMontant(paiement.montant, paiement.devise)}.`;
+  }
+  if (paiement.montantFcfa) {
+    return `Payé via ${fournisseur} — ${formaterFcfa(paiement.montantFcfa)}.`;
+  }
+  return "";
 }
 
 function echapperHtml(valeur: string): string {
@@ -87,8 +110,10 @@ export function emailLivraisonHtml(params: {
   paysLabel: string;
   produit: TypeProduit;
   liens: LiensKit;
+  paiement?: PaiementEmail;
 }): string {
   const offre = OFFRES[params.produit];
+  const paiement = lignePaiement(params.paiement);
   const bouton = (url: string, libelle: string, couleur: string) =>
     `<p style="margin:0 0 12px 0;"><a href="${url}" style="display:inline-block;background:${couleur};color:#14123A;font-weight:800;text-decoration:none;padding:14px 22px;border-radius:12px;">${libelle}</a></p>`;
 
@@ -103,6 +128,7 @@ export function emailLivraisonHtml(params: {
       <strong style="color:#F6EBD4;">${echapperHtml(params.nomProjet)}</strong>
       (${echapperHtml(params.metierLabel)} — ${echapperHtml(params.paysLabel)}) vient d'être généré.
     </p>
+    ${paiement ? `<p style="font-size:13px;line-height:1.6;color:#E8B04B;margin:0 0 20px 0;">${echapperHtml(paiement)}</p>` : ""}
 
     <div style="background:#1F1B55;border:1px solid rgba(232,176,75,0.35);border-radius:18px;padding:22px;margin-bottom:24px;">
       ${params.liens.livre ? bouton(params.liens.livre, "📘 Ouvrir mon livre stratégique", "#E8B04B") : ""}
@@ -147,18 +173,29 @@ export function emailBienvenueHtml(params: { email: string; prenom?: string }): 
       </p>
     </div>
 
-    <p style="margin:0 0 12px 0;font-size:15px;color:#F6EBD4;"><strong>Vos 6 kits métiers</strong></p>
+    <p style="margin:0 0 12px 0;font-size:15px;color:#F6EBD4;"><strong>Vos 8 kits métiers + Autre métier</strong></p>
     <p style="margin:0 0 24px 0;line-height:1.9;font-size:14px;color:#B9B4D6;">
-      🍲 Restaurant / Maquis · 🛍️ Boutique E-commerce · 🌾 Élevage / Agriculture<br>
-      💅 Salon de Beauté · 💼 Agence de Services · 🏦 Dossier de Financement
+      🛍️ E-commerce &amp; Mode · 🏠 Immobilier · 🍲 Restauration · 💅 Beauté &amp; Bien-être<br>
+      🎓 Formation &amp; Éducation · 🚚 Transport &amp; Logistique · 💼 Services B2B · 🩺 Santé · ✍️ Autre métier
     </p>
 
+    <div style="background:#1F1B55;border:1px solid rgba(52,211,153,0.35);border-radius:18px;padding:20px 22px;margin:24px 0;">
+      <p style="margin:0 0 10px 0;font-size:15px;color:#F6EBD4;"><strong>🎬 Studio Live — 10 USD / 30 jours</strong></p>
+      <p style="margin:0;line-height:1.7;font-size:14px;color:#B9B4D6;">
+        La régie live complète : structure du direct, chat IA commercial, salle pour vos
+        co-animateurs et votre Livre Guide Live personnalisé offert.
+        <a href="${SITE_URL}/studio-live" style="color:#E8B04B;">Découvrir le Studio Live</a>
+      </p>
+    </div>
+
     <p style="margin:0 0 24px 0;">
-      <a href="${SITE_URL}/#/commande" style="display:inline-block;background:#E8B04B;color:#14123A;font-weight:800;text-decoration:none;padding:14px 24px;border-radius:12px;">Choisir mon kit</a>
+      <a href="${SITE_URL}/boutique" style="display:inline-block;background:#E8B04B;color:#14123A;font-weight:800;text-decoration:none;padding:14px 24px;border-radius:12px;">Choisir mon kit</a>
     </p>
 
     <p style="font-size:14px;line-height:1.7;color:#B9B4D6;margin:0 0 8px 0;">
-      Paiement mobile money ou carte via <strong style="color:#F6EBD4;">SasPay</strong>.
+      Paiement mobile money ou carte via <strong style="color:#F6EBD4;">SasPay</strong> dans 23 pays,
+      ou via <strong style="color:#F6EBD4;">Paddle</strong> (EUR/USD) partout ailleurs. Les montants sont
+      recalculés dans votre devise locale, et la conversion affichée est indicative.
       Livraison immédiate par email après le paiement, et liens affichés directement à l'écran.
     </p>
     <p style="font-size:14px;line-height:1.7;color:#B9B4D6;margin:0 0 24px 0;">

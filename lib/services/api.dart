@@ -55,29 +55,64 @@ class ApiService {
   }
 
   // --------------------------------------------------------------------------
-  //  PAIEMENT SASPAY
+  //  CHECKOUT — routage SasPay / Paddle (kits & Studio Live)
   // --------------------------------------------------------------------------
-  static Future<CheckoutCree> creerPaiement({
+  static String _fonctionCheckout(Fournisseur fournisseur) {
+    return fournisseur == Fournisseur.sasPay
+        ? 'saspay-checkout'
+        : 'create-paddle-checkout';
+  }
+
+  static Map<String, dynamic> _corpsCheckout({
+    required String kind,
     required String metierCode,
+    required String metierLabel,
     required String nomProjet,
     required String paysCode,
     required String whatsapp,
     required String email,
     required String produitType,
     String? precisions,
+  }) {
+    return <String, dynamic>{
+      'kind': kind,
+      'metier_code': metierCode,
+      'metier_label': metierLabel,
+      'nom_projet': nomProjet,
+      'pays_code': paysCode,
+      'whatsapp': whatsapp,
+      'email': email,
+      'produit_type': produitType,
+      'precisions': precisions ?? '',
+    };
+  }
+
+  /// Crée un checkout pour un kit métier (La Boutique).
+  static Future<CheckoutCree> creerCheckoutKit({
+    required String metierCode,
+    required String metierLabel,
+    required String nomProjet,
+    required String paysCode,
+    required String whatsapp,
+    required String email,
+    required String produitType,
+    required Fournisseur fournisseur,
+    String? precisions,
   }) async {
     try {
       final reponse = await _client.functions.invoke(
-        'saspay-checkout',
-        body: {
-          'metier_code': metierCode,
-          'nom_projet': nomProjet,
-          'pays_code': paysCode,
-          'whatsapp': whatsapp,
-          'email': email,
-          'produit_type': produitType,
-          'precisions': precisions ?? '',
-        },
+        _fonctionCheckout(fournisseur),
+        body: _corpsCheckout(
+          kind: 'kit',
+          metierCode: metierCode,
+          metierLabel: metierLabel,
+          nomProjet: nomProjet,
+          paysCode: paysCode,
+          whatsapp: whatsapp,
+          email: email,
+          produitType: produitType,
+          precisions: precisions,
+        ),
       );
       return CheckoutCree.fromJson(_map(reponse.data));
     } catch (erreur) {
@@ -85,30 +120,314 @@ class ApiService {
     }
   }
 
-  /// Vérifie le paiement auprès de SasPay et déclenche la livraison.
-  static Future<ResultatCommande> verifierPaiement({required String orderId}) async {
+  /// Crée un checkout pour l'abonnement Studio Live (10 USD / 30 jours).
+  static Future<CheckoutCree> creerCheckoutStudio({
+    required String nomActivite,
+    required String metierCode,
+    required String metierLabel,
+    required String paysCode,
+    required String whatsapp,
+    required String email,
+    required Fournisseur fournisseur,
+  }) async {
     try {
       final reponse = await _client.functions.invoke(
+        _fonctionCheckout(fournisseur),
+        body: _corpsCheckout(
+          kind: 'studio',
+          metierCode: metierCode,
+          metierLabel: metierLabel,
+          nomProjet: nomActivite,
+          paysCode: paysCode,
+          whatsapp: whatsapp,
+          email: email,
+          produitType: 'studio',
+        ),
+      );
+      return CheckoutCree.fromJson(_map(reponse.data));
+    } catch (erreur) {
+      throw ApiException(_messageErreur(erreur));
+    }
+  }
+
+  /// Vérifie le paiement SasPay ou Paddle et déclenche la livraison.
+  static Future<ResultatCommande> verifierPaiement({
+    String? orderId,
+    String? subscriptionId,
+    String? provider,
+  }) async {
+    try {
+      final corps = <String, dynamic>{};
+      if (orderId != null && orderId.isNotEmpty) corps['order_id'] = orderId;
+      if (subscriptionId != null && subscriptionId.isNotEmpty) {
+        corps['subscription_id'] = subscriptionId;
+      }
+      if (provider != null) corps['provider'] = provider;
+
+      final reponse = await _client.functions.invoke(
         'verify-payment',
-        body: {'order_id': orderId},
+        body: corps,
       );
       return ResultatCommande.fromJson(_map(reponse.data));
     } on FunctionException catch (erreur) {
       final details = _map(erreur.details);
       if (details['paid'] == true) {
-        // Paiement encaissé mais génération en échec : on peut réessayer.
-        return ResultatCommande(
-          orderId: orderId,
-          paid: true,
-          statut: 'ERREUR',
-          liens: LiensKit.fromJson(details['liens']),
-          livraison: EtatLivraison.fromJson(details['livraison']),
-          message: '${details['error'] ?? 'La génération a échoué. Réessayez dans un instant.'}',
-        );
+        return ResultatCommande.fromJson(details);
       }
       throw ApiException(_messageErreur(erreur));
     } catch (erreur) {
       throw ApiException(_messageErreur(erreur));
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  //  STUDIO LIVE — abonnement, guide, sessions, chat temps réel
+  // --------------------------------------------------------------------------
+  static Future<AbonnementStudio?> monAbonnement() async {
+    try {
+      final utilisateur = _client.auth.currentUser;
+      if (utilisateur == null) return null;
+
+      // 1. Chercher d'abord un abonnement réellement actif, quel que soit son
+      //    ancienneté (un utilisateur peut avoir plusieurs commandes).
+      final actif = await _client
+          .from('studio_subscriptions')
+          .select()
+          .eq('status', 'ACTIF')
+          .gt('expires_at', DateTime.now().toUtc().toIso8601String())
+          .order('expires_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (actif != null) {
+        return AbonnementStudio.fromJson(Map<String, dynamic>.from(actif));
+      }
+
+      // 2. Sinon, le dernier abonnement (pour afficher « en attente » / expiré).
+      final dernier = await _client
+          .from('studio_subscriptions')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (dernier == null) return null;
+      return AbonnementStudio.fromJson(Map<String, dynamic>.from(dernier));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Essai gratuit de 3 jours déjà consommé (ou en cours) par l'utilisateur.
+  static Future<EssaiStudio?> monEssai() async {
+    try {
+      final utilisateur = _client.auth.currentUser;
+      if (utilisateur == null) return null;
+      final ligne = await _client
+          .from('studio_trials')
+          .select()
+          .eq('user_id', utilisateur.id)
+          .maybeSingle();
+      if (ligne == null) return null;
+      return EssaiStudio.fromJson(Map<String, dynamic>.from(ligne));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Démarre l'essai gratuit côté serveur (RPC security definer).
+  /// Un seul essai par utilisateur, email confirmé requis, jamais prolongeable.
+  static Future<EssaiStudio> demarrerEssai() async {
+    try {
+      final reponse = await _client.rpc('demarrer_essai_studio');
+      final donnees = _map(reponse);
+      if (donnees.isEmpty) {
+        final essai = await monEssai();
+        if (essai != null) return essai;
+        throw ApiException('Impossible de démarrer l\'essai gratuit.');
+      }
+      return EssaiStudio.fromJson(donnees);
+    } catch (erreur) {
+      throw ApiException(_messageErreur(erreur));
+    }
+  }
+
+  /// Accès effectif : abonnement actif OU essai gratuit non expiré.
+  static Future<AccesStudio> accesStudio() async {
+    try {
+      final utilisateur = _client.auth.currentUser;
+      if (utilisateur == null) return const AccesStudio();
+      final abonnement = await monAbonnement();
+      final essai = await monEssai();
+      return AccesStudio(abonnement: abonnement, essai: essai);
+    } catch (_) {
+      return const AccesStudio();
+    }
+  }
+
+  static Future<GuideLive?> monGuide(String subscriptionId) async {    if (subscriptionId.isEmpty) return null;
+    try {
+      final ligne = await _client
+          .from('studio_guides')
+          .select()
+          .eq('subscription_id', subscriptionId)
+          .maybeSingle();
+      if (ligne == null) return null;
+      return GuideLive.fromJson(Map<String, dynamic>.from(ligne));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<GuideLive> genererGuide(String subscriptionId) async {
+    try {
+      final reponse = await _client.functions.invoke(
+        'generate-live-guide',
+        body: <String, dynamic>{'subscription_id': subscriptionId},
+      );
+      final donnees = _map(_map(reponse.data)['guide']);
+      return GuideLive.fromJson(donnees);
+    } catch (erreur) {
+      throw ApiException(_messageErreur(erreur));
+    }
+  }
+
+  static Future<SessionLive> enregistrerSessionLive(SessionLive session) async {
+    try {
+      final utilisateur = _client.auth.currentUser;
+      final donnees = session.toJson()
+        ..['user_id'] = session.userId ?? utilisateur?.id;
+      Map<String, dynamic> ligne;
+      if (session.id.isEmpty) {
+        ligne = await _client
+            .from('studio_live_sessions')
+            .insert(donnees)
+            .select()
+            .single();
+      } else {
+        ligne = await _client
+            .from('studio_live_sessions')
+            .update(donnees)
+            .eq('id', session.id)
+            .select()
+            .single();
+      }
+      return SessionLive.fromJson(Map<String, dynamic>.from(ligne));
+    } catch (erreur) {
+      throw ApiException(_messageErreur(erreur));
+    }
+  }
+
+  static Future<bool> changerStatutSession(String sessionId, String statut) async {
+    if (sessionId.isEmpty) return false;
+    try {
+      await _client
+          .from('studio_live_sessions')
+          .update(<String, dynamic>{'statut': statut})
+          .eq('id', sessionId);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<List<SessionLive>> mesSessionsLive(String? subscriptionId) async {
+    if (subscriptionId == null || subscriptionId.isEmpty) {
+      final utilisateur = _client.auth.currentUser;
+      if (utilisateur == null) return const <SessionLive>[];
+      try {
+        final lignes = await _client
+            .from('studio_live_sessions')
+            .select()
+            .eq('user_id', utilisateur.id)
+            .order('created_at', ascending: false)
+            .limit(10);
+        return lignes
+            .map((ligne) => SessionLive.fromJson(Map<String, dynamic>.from(ligne)))
+            .toList();
+      } catch (_) {
+        return const <SessionLive>[];
+      }
+    }
+    try {
+      final lignes = await _client
+          .from('studio_live_sessions')
+          .select()
+          .eq('subscription_id', subscriptionId)
+          .order('created_at', ascending: false)
+          .limit(10);
+      return lignes
+          .map((ligne) => SessionLive.fromJson(Map<String, dynamic>.from(ligne)))
+          .toList();
+    } catch (_) {
+      return const <SessionLive>[];
+    }
+  }
+
+  static Future<SessionLive?> sessionPublique(
+    String roomId, {
+    String? inviteToken,
+  }) async {
+    try {
+      final reponse = await _client.functions.invoke(
+        'studio-room',
+        body: <String, dynamic>{
+          'action': 'get',
+          'room_id': roomId,
+          'invite_token': ?inviteToken,
+        },
+      );
+      final donnees = _map(_map(reponse.data)['session']);
+      if (donnees.isEmpty) return null;
+      return SessionLive.fromJson(donnees);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<ReponseChatLive> chatLive({
+    required String roomId,
+    required String message,
+    required String author,
+    required String platform,
+    String? inviteToken,
+  }) async {
+    try {
+      final reponse = await _client.functions.invoke(
+        'live-auto-chat',
+        body: <String, dynamic>{
+          'action': 'ask',
+          'room_id': roomId,
+          'message': message,
+          'author': author,
+          'platform': platform,
+          'invite_token': ?inviteToken,
+        },
+      );
+      final donnees = _map(reponse.data);
+      final messageBrut = donnees['message'];
+      return ReponseChatLive(
+        reply: '${donnees['reply'] ?? ''}',
+        message: messageBrut is Map
+            ? MessageLive.fromJson(Map<String, dynamic>.from(messageBrut))
+            : null,
+      );
+    } catch (erreur) {
+      throw ApiException(_messageErreur(erreur));
+    }
+  }
+
+  static Future<List<MessageLive>> messagesLive(String roomId) async {
+    try {
+      final lignes = await _client
+          .from('studio_live_messages')
+          .select()
+          .eq('room_id', roomId)
+          .order('created_at', ascending: true)
+          .limit(80);
+      return lignes
+          .map((ligne) => MessageLive.fromJson(Map<String, dynamic>.from(ligne)))
+          .toList();
+    } catch (_) {
+      return const <MessageLive>[];
     }
   }
 
@@ -218,13 +537,21 @@ class ApiService {
   static Future<bool> estAdmin() async {
     final utilisateur = _client.auth.currentUser;
     if (utilisateur == null) return false;
+
+    // 1. Rôle explicite en base (profiles.is_admin).
     try {
       final profil = await _client
           .from('profiles')
           .select('is_admin')
           .eq('id', utilisateur.id)
           .maybeSingle();
-      return profil?['is_admin'] == true;
+      if (profil?['is_admin'] == true) return true;
+    } catch (_) {}
+
+    // 2. Liste ADMIN_EMAILS côté serveur (jamais exposée au client).
+    try {
+      final reponse = await _client.functions.invoke('admin-check');
+      return _map(reponse.data)['is_admin'] == true;
     } catch (_) {
       return false;
     }

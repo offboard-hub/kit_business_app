@@ -29,12 +29,19 @@ class AppConfig {
 
   static String get lienWhatsAppAide {
     final message = Uri.encodeComponent(
-      'Bonjour Kit Business 👋 Je souhaite des informations sur les kits métiers clés en main.',
+      'Bonjour e-booklive 👋 Je souhaite des informations sur les kits métiers et le Studio Live.',
     );
     return 'https://wa.me/$whatsappAide?text=$message';
   }
 
-  static String get lienCommande => '$siteUrl/#/commande';
+  static String get lienCommande => '$siteUrl/boutique';
+
+  static String get lienStudio => '$siteUrl/studio-live';
+
+  static String get lienGuide => '$siteUrl/guide';
+
+  /// Abonnement Studio Live : 10 USD pour 30 jours (source de vérité).
+  static const int studioPrixUsd = 10;
 
   /// URL publique d'une Edge Function.
   static String fonction(String nom) => '$supabaseUrl/functions/v1/$nom';
@@ -138,116 +145,3 @@ Offre offreParApiType(String apiType) {
   );
 }
 
-// ============================================================================
-//  KITS MÉTIERS CLÉS EN MAIN (sélection visuelle en 1 clic)
-// ============================================================================
-class KitMetier {
-  const KitMetier({
-    required this.code,
-    required this.label,
-    required this.emoji,
-    required this.promesse,
-    required this.icone,
-  });
-
-  final String code;
-  final String label;
-  final String emoji;
-  final String promesse;
-  final IconData icone;
-}
-
-const List<KitMetier> kitsMetiers = [
-  KitMetier(
-    code: 'restaurant',
-    label: 'Restaurant / Maquis',
-    emoji: '🍲',
-    promesse: 'Remplir votre salle, maîtriser vos coûts et fidéliser vos clients.',
-    icone: Icons.restaurant_rounded,
-  ),
-  KitMetier(
-    code: 'ecommerce',
-    label: 'Boutique E-commerce',
-    emoji: '🛍️',
-    promesse: 'Vendre sur WhatsApp et livrer à domicile sans perdre d\'argent.',
-    icone: Icons.shopping_bag_rounded,
-  ),
-  KitMetier(
-    code: 'elevage',
-    label: 'Élevage / Agriculture',
-    emoji: '🌾',
-    promesse: 'Produire plus, vendre mieux et sécuriser vos marges saisonnières.',
-    icone: Icons.agriculture_rounded,
-  ),
-  KitMetier(
-    code: 'beaute',
-    label: 'Salon de Beauté',
-    emoji: '💅',
-    promesse: 'Remplir votre agenda et vendre vos prestations au juste prix.',
-    icone: Icons.spa_rounded,
-  ),
-  KitMetier(
-    code: 'agence',
-    label: 'Agence de Services',
-    emoji: '💼',
-    promesse: 'Vendre vos prestations, cadrer vos devis et livrer sans dépassement.',
-    icone: Icons.business_center_rounded,
-  ),
-  KitMetier(
-    code: 'financement',
-    label: 'Dossier de Financement',
-    emoji: '🏦',
-    promesse: 'Préparer un dossier bancaire ou microfinance solide et crédible.',
-    icone: Icons.account_balance_rounded,
-  ),
-];
-
-KitMetier kitParCode(String code) {
-  return kitsMetiers.firstWhere(
-    (kit) => kit.code == code,
-    orElse: () => kitsMetiers.first,
-  );
-}
-
-// ============================================================================
-//  PAYS AFRICAINS (devises FCFA : XOF / XAF)
-// ============================================================================
-class Pays {
-  const Pays({
-    required this.code,
-    required this.nom,
-    required this.indicatif,
-    required this.devise,
-    required this.drapeau,
-  });
-
-  final String code;
-  final String nom;
-  final String indicatif;
-  final String devise;
-  final String drapeau;
-}
-
-const List<Pays> paysAfricains = [
-  Pays(code: 'CI', nom: 'Côte d\'Ivoire', indicatif: '+225', devise: 'XOF', drapeau: '🇨🇮'),
-  Pays(code: 'SN', nom: 'Sénégal', indicatif: '+221', devise: 'XOF', drapeau: '🇸🇳'),
-  Pays(code: 'ML', nom: 'Mali', indicatif: '+223', devise: 'XOF', drapeau: '🇲🇱'),
-  Pays(code: 'CM', nom: 'Cameroun', indicatif: '+237', devise: 'XAF', drapeau: '🇨🇲'),
-  Pays(code: 'BF', nom: 'Burkina Faso', indicatif: '+226', devise: 'XOF', drapeau: '🇧🇫'),
-  Pays(code: 'BJ', nom: 'Bénin', indicatif: '+229', devise: 'XOF', drapeau: '🇧🇯'),
-  Pays(code: 'TG', nom: 'Togo', indicatif: '+228', devise: 'XOF', drapeau: '🇹🇬'),
-  Pays(code: 'GA', nom: 'Gabon', indicatif: '+241', devise: 'XAF', drapeau: '🇬🇦'),
-  Pays(code: 'NE', nom: 'Niger', indicatif: '+227', devise: 'XOF', drapeau: '🇳🇪'),
-  Pays(code: 'TD', nom: 'Tchad', indicatif: '+235', devise: 'XAF', drapeau: '🇹🇩'),
-  Pays(code: 'CG', nom: 'Congo-Brazzaville', indicatif: '+242', devise: 'XAF', drapeau: '🇨🇬'),
-  Pays(code: 'CF', nom: 'Centrafrique', indicatif: '+236', devise: 'XAF', drapeau: '🇨🇫'),
-  Pays(code: 'GW', nom: 'Guinée-Bissau', indicatif: '+245', devise: 'XOF', drapeau: '🇬🇼'),
-  Pays(code: 'GQ', nom: 'Guinée Équatoriale', indicatif: '+240', devise: 'XAF', drapeau: '🇬🇶'),
-];
-
-Pays paysParCode(String code) {
-  return paysAfricains.firstWhere(
-    (pays) => pays.code == code,
-    orElse: () => paysAfricains.first,
-  );
-}

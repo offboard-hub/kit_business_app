@@ -4,56 +4,556 @@
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#14123A">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#090D16">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-  <title>Kit Business — Kits métiers clés en main en FCFA</title>
-  <meta name="description" content="Choisissez votre métier en 1 clic et recevez un livre stratégique, des prompts IA et un Google Sheet automatisé. Prix en FCFA, paiement mobile money et carte via SasPay, livraison immédiate sur WhatsApp et par email.">
-  <meta name="keywords" content="kit business, Afrique francophone, FCFA, prompts IA, livre stratégique, Google Sheets, restaurant, e-commerce, élevage, salon de beauté, financement">
-  <meta property="og:title" content="Kit Business — votre kit métier clés en main en FCFA">
-  <meta property="og:description" content="Livre stratégique, prompts IA et Google Sheet automatisé pour votre métier, dans votre pays. Livraison immédiate sur WhatsApp et par email.">
-  <meta property="og:type" content="website">
+  <title>e-booklive — La Boutique &amp; Studio Live</title>
+  <meta name="description" content="e-booklive : des kits business sur mesure pour votre métier et un studio live complet pour vendre en direct. Prix dans votre devise, paiement SasPay ou Paddle, livraison immédiate.">
+  <meta name="keywords" content="e-booklive, kit business, studio live, live shopping, prompts IA, livre stratégique, SasPay, Paddle, Afrique, Maroc, CFA, formation, e-commerce">
   <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://e-booklive.offboard-hub.com/">
 
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23E8B04B'/%3E%3Ctext x='50' y='70' font-size='58' text-anchor='middle'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
+  <meta property="og:site_name" content="e-booklive">
+  <meta property="og:title" content="e-booklive — La Boutique &amp; Studio Live">
+  <meta property="og:description" content="Des kits business écrits pour votre métier et une régie live pro : chat IA, co-animateur, Livre Guide offert. 10 $ / 30 jours.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://e-booklive.offboard-hub.com/">
+  <meta property="og:image" content="https://e-booklive.offboard-hub.com/icons/Icon-512.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="e-booklive — La Boutique &amp; Studio Live">
+  <meta name="twitter:description" content="Kits business sur mesure et studio live pour vendre en direct. Prix dans votre devise.">
+  <meta name="twitter:image" content="https://e-booklive.offboard-hub.com/icons/Icon-512.png">
 
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link rel="manifest" href="manifest.json">
 
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "e-booklive",
+    "url": "https://e-booklive.offboard-hub.com",
+    "logo": "https://e-booklive.offboard-hub.com/favicon.svg",
+    "description": "Kits business sur mesure et studio live pour les entrepreneurs.",
+    "sameAs": []
+  }
+  </script>
+
   <style>
-    /* Masquer le badge Netlify */
-    #netlify-badge,
-    iframe[title="Netlify Drawer"] {
-      display: none !important;
+    :root {
+      --bg: #090D16;
+      --surface: #111827;
+      --border: #1E293B;
+      --text: #E8EDF5;
+      --muted: #93A3B8;
+      --faint: #64748B;
+      --or: #E7B84B;
+      --or-soft: #F6D98A;
+      --emeraude: #34D399;
     }
 
-    @keyframes chargement {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(200%); }
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* Masquer le badge Netlify, s'il est injecté. */
+    #netlify-badge,
+    iframe[title="Netlify Drawer"] { display: none !important; }
+
+    /* ------------------------------------------------------------------
+       ÉCRAN DE CHARGEMENT
+       ------------------------------------------------------------------ */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 60% 50% at 15% 0%, rgba(231, 184, 75, 0.12), transparent 60%),
+        radial-gradient(ellipse 55% 45% at 90% 100%, rgba(52, 211, 153, 0.10), transparent 60%),
+        linear-gradient(180deg, #0B111C 0%, #090D16 45%, #070A12 100%);
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+
+    #splash-screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 20%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 20%, transparent 80%);
+      pointer-events: none;
+    }
+
+    #splash-screen.splash-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px;
+      text-align: center;
+      animation: splash-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes splash-in {
+      from { opacity: 0; transform: translateY(14px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .logo-wrap {
+      position: relative;
+      width: 118px;
+      height: 118px;
+      margin-bottom: 26px;
+    }
+
+    .logo-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -22px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 70%);
+      animation: halo 3.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes halo {
+      0%, 100% { opacity: 0.45; transform: scale(0.92); }
+      50% { opacity: 1; transform: scale(1.06); }
+    }
+
+    .logo-svg { width: 100%; height: 100%; display: block; }
+
+    .logo-svg .badge {
+      opacity: 0;
+      animation: badge-in 0.7s 0.1s ease-out forwards;
+      transform-origin: 48px 48px;
+    }
+
+    @keyframes badge-in {
+      from { opacity: 0; transform: scale(0.88); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .logo-svg .book {
+      opacity: 0;
+      animation: book-in 0.8s 0.25s ease-out forwards;
+    }
+
+    @keyframes book-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo-svg .onde {
+      stroke-dasharray: 80;
+      stroke-dashoffset: 80;
+      animation: tracer 0.9s ease-out forwards;
+    }
+
+    .logo-svg .onde-1 { animation-delay: 0.45s; }
+    .logo-svg .onde-2 { animation-delay: 0.62s; }
+    .logo-svg .onde-3 { animation-delay: 0.79s; }
+
+    @keyframes tracer {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .logo-svg .point {
+      opacity: 0;
+      animation: point-in 0.5s 1.05s ease-out forwards, pulse 2.6s 1.6s ease-in-out infinite;
+      transform-origin: 48px 39px;
+    }
+
+    @keyframes point-in {
+      from { opacity: 0; transform: scale(0.4); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: baseline;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1.1px;
+      line-height: 1;
+      margin: 0;
+    }
+
+    .wordmark .e { color: var(--or); font-weight: 900; }
+    .wordmark .book { color: var(--text); }
+    .wordmark .live { color: var(--emeraude); }
+    .wordmark .dot { color: var(--or); }
+
+    .tagline {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 10.5px;
+      letter-spacing: 3.4px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .progress-wrap {
+      margin-top: 40px;
+      width: min(280px, 72vw);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      width: 6%;
+      height: 100%;
+      border-radius: 30px;
+      background: linear-gradient(90deg, var(--or-soft), var(--or) 52%, var(--emeraude));
+      box-shadow: 0 0 16px rgba(52, 211, 153, 0.35);
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      color: var(--faint);
+      font-size: 10px;
+      letter-spacing: 0.4px;
+    }
+
+    #splash-status {
+      margin-top: 18px;
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 12.5px;
+      transition: opacity 0.25s ease;
+    }
+
+    #splash-status.swap { opacity: 0; }
+
+    .trust {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 34px;
+      color: var(--faint);
+      font-size: 10px;
+    }
+
+    .trust span { display: inline-flex; align-items: center; gap: 6px; }
+
+    .trust svg { width: 12px; height: 12px; opacity: 0.7; }
+
+    .splash-error {
+      display: none;
+      width: min(420px, 86vw);
+      margin-top: 28px;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(248, 113, 113, 0.07);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .splash-error.visible { display: block; }
+
+    .splash-error button {
+      margin-top: 12px;
+      padding: 9px 18px;
+      border: 0;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--or-soft), var(--or));
+      color: #090D16;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .noscript {
+      padding: 24px;
+      color: var(--text);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+      .logo-svg .badge, .logo-svg .book, .logo-svg .point { opacity: 1; }
+      .logo-svg .onde { stroke-dashoffset: 0; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Écran de chargement -->
-  <div id="splash-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #14123A; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;">
-    <div style="font-size: 54px; margin-bottom: 18px;">🚀</div>
-    <h1 style="color: #E8B04B; font-size: 28px; font-weight: 800; letter-spacing: 3px; margin: 0;">KIT BUSINESS</h1>
-    <p style="color: #F6EBD4; margin-top: 10px; font-size: 14px;">Vos kits métiers clés en main — 100 % FCFA</p>
-    <div style="margin-top: 22px; width: 160px; height: 4px; background-color: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
-      <div style="width: 50%; height: 100%; background-color: #E8B04B; border-radius: 2px; animation: chargement 1.5s infinite ease-in-out;"></div>
+  <div id="splash-screen" role="status" aria-live="polite" aria-label="Chargement de e-booklive">
+    <div class="splash-content">
+      <div class="logo-wrap">
+        <svg class="logo-svg" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="splash-badge" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#162033"/>
+              <stop offset="0.55" stop-color="#111827"/>
+              <stop offset="1" stop-color="#0A0F19"/>
+            </linearGradient>
+            <linearGradient id="splash-border" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#E7B84B" stop-opacity="0.7"/>
+              <stop offset="1" stop-color="#34D399" stop-opacity="0.4"/>
+            </linearGradient>
+            <linearGradient id="splash-or" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#FBE3A4"/>
+              <stop offset="0.55" stop-color="#E7B84B"/>
+              <stop offset="1" stop-color="#C99A2E"/>
+            </linearGradient>
+            <linearGradient id="splash-em" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6EE7B7"/>
+              <stop offset="1" stop-color="#059669"/>
+            </linearGradient>
+            <linearGradient id="splash-ondes" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#E7B84B"/>
+              <stop offset="0.55" stop-color="#F6D98A"/>
+              <stop offset="1" stop-color="#34D399"/>
+            </linearGradient>
+          </defs>
+
+          <rect class="badge" x="2" y="2" width="92" height="92" rx="23" fill="url(#splash-badge)" stroke="url(#splash-border)" stroke-width="1.4"/>
+
+          <g class="book">
+            <path d="M19 57 C29 52.5 39.5 53.5 48 60 L48 74 C39.5 67.5 29 66.5 19 70.5 Z" fill="url(#splash-or)"/>
+            <path d="M77 57 C67 52.5 56.5 53.5 48 60 L48 74 C56.5 67.5 67 66.5 77 70.5 Z" fill="url(#splash-or)"/>
+            <path d="M48 60 V74" stroke="#090D16" stroke-opacity="0.5" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M24 64 L42 65.2 M54 65.2 L72 64 M24 67.4 L42 68.6 M54 68.6 L72 67.4" stroke="#090D16" stroke-opacity="0.18" stroke-width="1.1" stroke-linecap="round"/>
+          </g>
+
+          <g fill="none" stroke="url(#splash-ondes)" stroke-width="3" stroke-linecap="round">
+            <path class="onde onde-1" d="M39 39 A9 9 0 0 1 57 39"/>
+            <path class="onde onde-2" d="M31.5 39 A16.5 16.5 0 0 1 64.5 39"/>
+            <path class="onde onde-3" d="M24 39 A24 24 0 0 1 72 39"/>
+          </g>
+
+          <circle class="point" cx="48" cy="39" r="5.1" fill="url(#splash-em)"/>
+        </svg>
+      </div>
+
+      <p class="wordmark" aria-label="e-booklive">
+        <span class="e">e</span><span class="book">-book</span><span class="live">live</span><span class="dot">.</span>
+      </p>
+      <p class="tagline">La Boutique &nbsp;·&nbsp; Studio Live</p>
+
+      <div class="progress-wrap">
+        <div class="progress-track">
+          <div class="progress-fill" id="splash-bar-fill"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="splash-percent">0 %</span>
+          <span>Chargement sécurisé</span>
+        </div>
+      </div>
+
+      <p id="splash-status">Initialisation de la plateforme…</p>
+
+      <div class="trust">
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          Paiement sécurisé
+        </span>
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+          Tous les pays
+        </span>
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
+          Livraison immédiate
+        </span>
+      </div>
+
+      <div class="splash-error" id="splash-error">
+        <strong>Le chargement prend plus de temps que prévu.</strong>
+        <div style="margin-top:6px;color:#93A3B8;">Vérifiez votre connexion puis réessayez. Vos paiements et vos données restent en sécurité.</div>
+        <button type="button" onclick="window.location.reload()">Réessayer</button>
+      </div>
     </div>
-    <p style="color: #B9B4D6; margin-top: 18px; font-size: 11px;">Paiement sécurisé SasPay · livraison WhatsApp &amp; email</p>
   </div>
 
-  <script src="flutter_bootstrap.js" async></script>
+  <noscript>
+    <div class="noscript">
+      e-booklive nécessite JavaScript pour afficher La Boutique et le Studio Live.
+      Activez-le dans votre navigateur, ou écrivez-nous sur WhatsApp.
+    </div>
+  </noscript>
 
   <script>
-    window.addEventListener('flutter-first-frame', function () {
-      var ecran = document.getElementById('splash-screen');
-      if (ecran) ecran.style.display = 'none';
-    });
+    /* ==================================================================
+       PONT JITSI — utilisé par la régie Studio Live (Flutter Web).
+       ================================================================== */
+    window.ebookliveJitsi = {
+      api: null,
+      create: function (domain, containerId, json) {
+        if (!window.JitsiMeetExternalAPI) return false;
+        try {
+          if (this.api) { try { this.api.dispose(); } catch (e) {} }
+          var options = JSON.parse(json);
+          options.parentNode = document.getElementById(containerId);
+          if (!options.parentNode) return false;
+          this.api = new window.JitsiMeetExternalAPI(domain, options);
+          return true;
+        } catch (error) {
+          console.error('Jitsi :', error);
+          return false;
+        }
+      },
+      command: function (commande) {
+        try { if (this.api) this.api.executeCommand(commande); } catch (e) {}
+      },
+      dispose: function () {
+        try { if (this.api) this.api.dispose(); } catch (e) {}
+        this.api = null;
+      }
+    };
+
+    /* ==================================================================
+       PONT PADDLE — fallback quand Paddle ne renvoie pas d'URL hébergée.
+       ================================================================== */
+    window.ebooklivePaddle = {
+      open: function (token, transactionId, environment) {
+        try {
+          if (!window.Paddle) return false;
+          if (window.Paddle.Environment && window.Paddle.Environment.set) {
+            window.Paddle.Environment.set(environment === 'sandbox' ? 'sandbox' : 'production');
+          }
+          window.Paddle.Initialize({ token: token });
+          window.Paddle.Checkout.open({ transactionId: transactionId });
+          return true;
+        } catch (error) {
+          console.error('Paddle :', error);
+          return false;
+        }
+      }
+    };
+
+    /* ==================================================================
+       ÉCRAN DE CHARGEMENT — progression, messages, sortie en douceur.
+       ================================================================== */
+    (function () {
+      var splash = document.getElementById('splash-screen');
+      var bar = document.getElementById('splash-bar-fill');
+      var percent = document.getElementById('splash-percent');
+      var status = document.getElementById('splash-status');
+      var errorBox = document.getElementById('splash-error');
+
+      var messages = [
+        'Initialisation de la plateforme…',
+        'Connexion sécurisée à vos services…',
+        'Chargement de votre devise et de vos préférences…',
+        'Ouverture de La Boutique et du Studio Live…',
+        'Derniers réglages, encore un instant…'
+      ];
+      var messageIndex = 0;
+      var progress = 7;
+      var finished = false;
+      var statusTimer = null;
+      var progressTimer = null;
+
+      function render() {
+        var value = Math.max(0, Math.min(100, progress));
+        bar.style.width = value + '%';
+        percent.textContent = Math.round(value) + ' %';
+      }
+
+      function finish() {
+        if (finished) return;
+        finished = true;
+        if (statusTimer) clearInterval(statusTimer);
+        if (progressTimer) clearInterval(progressTimer);
+        progress = 100;
+        render();
+        status.style.opacity = '0';
+        setTimeout(function () {
+          splash.classList.add('splash-out');
+          setTimeout(function () {
+            if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+          }, 700);
+        }, 220);
+      }
+
+      function showError() {
+        if (finished) return;
+        errorBox.classList.add('visible');
+      }
+
+      render();
+      statusTimer = setInterval(function () {
+        if (finished) return;
+        status.classList.add('swap');
+        setTimeout(function () {
+          messageIndex = (messageIndex + 1) % messages.length;
+          status.textContent = messages[messageIndex];
+          status.classList.remove('swap');
+        }, 220);
+      }, 1900);
+
+      progressTimer = setInterval(function () {
+        if (finished) return;
+        var reste = 92 - progress;
+        progress += Math.max(0.35, reste * 0.028);
+        render();
+      }, 180);
+
+      window.addEventListener('flutter-first-frame', finish);
+
+      // Si Flutter n'a pas démarré après 22 s, on propose de recharger.
+      setTimeout(function () {
+        if (!finished) showError();
+      }, 22000);
+    })();
   </script>
 
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

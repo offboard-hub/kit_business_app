@@ -3,8 +3,39 @@
   package = "netlify-plugin-flutter"
 
 [build]
-  command = "flutter build web --release --dart-define=SITE_URL=$SITE_URL --dart-define=WHATSAPP_AIDE_NUMBER=$WHATSAPP_AIDE_NUMBER"
+  command = "flutter build web --release --no-wasm-dry-run --dart-define=FLUTTER_WEB_CANVASKIT_URL=/canvaskit/ --dart-define=SITE_URL=$SITE_URL --dart-define=WHATSAPP_AIDE_NUMBER=$WHATSAPP_AIDE_NUMBER"
   publish = "build/web"
 
 [build.environment]
   FLUTTER_VERSION = "3.47.9"
+
+# URL propres (path strategy) : /boutique, /studio-live, /live/<salle>…
+# Netlify sert d'abord les fichiers existants, puis renvoie index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/flutter_service_worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self \"https://meet.jit.si\"), microphone=(self \"https://meet.jit.si\"), display-capture=(self \"https://meet.jit.si\"), fullscreen=(self \"https://meet.jit.si\")"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.paddle.com https://meet.jit.si https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.paddle.com https://sandbox-api.paddle.com https://meet.jit.si wss://meet.jit.si https://www.gstatic.com https://fonts.gstatic.com; frame-src 'self' https://meet.jit.si https://*.paddle.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+
+[[headers]]
+  for = "/live/*"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"

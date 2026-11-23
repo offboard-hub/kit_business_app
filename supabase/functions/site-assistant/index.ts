@@ -1,7 +1,8 @@
 // ============================================================================
-//  site-assistant — Bulle de chat IA du site (DeepSeek).
-//  Elle connaît toute l'offre, répond aux questions des spectateurs des Lives
-//  OBS et les redirige vers le lien d'achat SasPay.
+//  site-assistant — Bulle de chat IA du site (DeepSeek / « Awa »).
+//  Elle connaît les deux univers (La Boutique + Studio Live), les 8 secteurs,
+//  les tarifs kits, le Studio Live 10 USD, les 23 pays SasPay + Paddle et le
+//  Guide & Tutoriel. Elle redirige vers /boutique, /studio-live ou /guide.
 //  Aucun webhook WhatsApp : le contact WhatsApp se fait via le bouton wa.me.
 // ============================================================================
 
@@ -17,6 +18,7 @@ serve(async (req) => {
     return json({
       success: true,
       service: "site-assistant",
+      univers: ["boutique", "studio-live"],
       message: "Envoyez un POST JSON { message, conversation_id }.",
     });
   }

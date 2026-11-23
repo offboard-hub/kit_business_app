@@ -1,147 +1,153 @@
-# 🚀 Kit Business — kits métiers clés en main pour l'Afrique francophone
+# e-booklive — La Boutique & Studio Live
 
-Application **Flutter Web + Supabase** qui vend des kits business générés par IA,
-**exclusivement en FCFA**, à des entrepreneurs de Côte d'Ivoire, du Sénégal, du Mali,
-du Cameroun, du Burkina Faso, du Bénin, du Togo, du Gabon, du Niger, du Tchad, du Congo,
-de Centrafrique, de Guinée-Bissau et de Guinée Équatoriale.
+Plateforme **Flutter Web + Supabase** pour les entrepreneurs : des **kits business
+sur mesure** par métier (La Boutique) et un **studio de vente en direct** avec
+chat IA et Livre Guide (Studio Live).
 
-> Positionnement : un secteur choisi en **1 clic**, un nom de projet, un pays, un
-> numéro WhatsApp — et le client reçoit immédiatement son livre stratégique, ses
-> prompts IA et son Google Sheet automatisé.
+> Positionnement : deux univers clairs, des prix convertis dans la devise du pays,
+> un paiement local ou international, une livraison immédiate.
 
 ---
 
-## 💰 Offres (100 % FCFA — plus aucun prix en dirham)
+## Les deux univers
 
-| Offre | Prix | Contenu |
-|---|---|---|
-| **Prompts IA** | **3 000 FCFA** | 10 prompts d'élite prêts à copier |
-| **Sheet Automatisé** | **3 500 FCFA** | Google Sheet : ventes, stocks, marges, point mort |
-| **Livre Stratégique** | **5 000 FCFA** | Plan d'action complet, adapté au pays |
-| **Pack Complet** *(le plus choisi)* | **9 000 FCFA** | Livre + prompts + Google Sheet |
+### 1. La Boutique — kits métiers
+Parcours en 2 étapes : choix du secteur (8 métiers ou « Autre métier »), puis choix
+du kit, du pays et paiement. L'IA (DeepSeek + Gemini) génère un livre stratégique,
+des prompts et un tableau de gestion, livrés par email (Resend).
 
-## 🧩 Les 6 kits métiers
+| Kit | Prix de référence |
+|---|---|
+| Prompts IA | 3 000 FCFA |
+| Sheet Automatisé | 3 500 FCFA |
+| Livre Stratégique | 5 000 FCFA |
+| Pack Complet *(le plus choisi)* | 9 000 FCFA |
 
-🍲 Restaurant / Maquis · 🛍️ Boutique E-commerce + livraison · 🌾 Élevage / Agriculture
-💅 Salon de Beauté · 💼 Agence de Services · 🏦 Dossier de Financement
+### 2. Studio Live — essai 3 jours, puis 10 USD / 30 jours
+- **Essai gratuit 3 jours**, sans carte ni paiement : régie, co-animateur et chat IA
+  (20 messages IA/jour). Le Livre Guide reste réservé aux abonnés payants.
+- Un seul essai par utilisateur, email confirmé requis, jamais prolongeable.
+- **Abonnement 10 USD / 30 jours** (bouton « S'abonner maintenant : 10 USD / mois »),
+  converti dans la devise du pays et encaissé par SasPay ou Paddle.
+- Régie en 3 onglets :
+- **Préparer mon Live** : plateformes (salle e-booklive, TikTok, YouTube, Instagram),
+  format solo/duo, caméra produits ou partage d'écran, Fiche Produit IA.
+- **Salle en direct** : Jitsi Meet IFrame API, contrôles micro/caméra/partage,
+  chat IA temps réel (Supabase Realtime) et bouton « Copier en 1 clic ».
+- **Mon Livre Guide Live** : guide personnalisé généré après paiement, envoyé par
+  email et téléchargeable.
 
----
-
-## ✨ Fonctionnalités
-
-- **Tunnel de commande visuel** : kit métier → offre → nom du projet, pays, WhatsApp,
-  précisions facultatives. Aucun formulaire libre.
-- **Paiement exclusif SasPay** (mobile money + carte) en XOF / XAF. YouCan Pay,
-  Paddle et PaySaS ont été retirés. Le montant est toujours calculé côté serveur.
-- **Livraison automatique par email** : dès que `verify-payment` valide le paiement,
-  le kit est généré (Gemini + DeepSeek + Google Sheets) puis envoyé par
-  **email (Resend)** et affiché immédiatement sur la page de confirmation.
-- **Email d'accueil Resend** sans lien de confirmation, à l'inscription et au checkout.
-- **Bouton « Aide WhatsApp »** (simple lien `wa.me`, aucun envoi automatique).
-- **Assistant IA du site** (bulle de chat DeepSeek) : il connaît l'offre, répond aux
-  spectateurs des Lives OBS et redirige vers le lien d'achat SasPay.
-- **Notes & Avis de nos clients** : note de 1 à 5 étoiles et commentaire publiés
-  depuis la page d'accueil (table `avis_site` protégée par RLS).
-- **Robot YouTube Live** : lit le `liveChatId`, répond toutes les 10 secondes avec
-  le lien du site.
-- **Agence Vidéo IA `/admin-videos`** : 4 agents (décortiqueur, sous-titres & hooks,
-  copywriter multi-réseaux, distributeur) et **zéro stockage Supabase** : seuls les
-  textes sont enregistrés, le `.mp4` part directement vers YouTube (privé) et TikTok
-  (brouillon). Un bouton **« Connecter TikTok »** réalise l'OAuth sans curl : le retour
-  sur `SITE_URL/?code=...` échange le code et stocke les jetons côté serveur.
+Lien co-animateur : `/live/:roomId?invite=<token>` — le spectateur rejoint via
+`/live/:roomId`.
 
 ---
 
-## 🏗️ Structure
+## Paiements & devises
+
+- **23 pays SasPay** en devise locale : XOF (ML, SN, CI, BF, BJ, TG, NE), XAF (CM,
+  GA, CG), CDF (CD), GNF (GN), NGN (NG), GHS (GH), SLE (SL), KES (KE), UGX (UG),
+  TZS (TZ), RWF (RW), MWK (MW), MZN (MZ), ZMW (ZM), INR (IN).
+- **Reste du monde : Paddle** en EUR (Europe + Maghreb) ou USD, TVA gérée,
+  conversion locale indicative.
+- Le montant est **toujours recalculé côté serveur** ; aucun prix client n'est
+  accepté. Les price IDs Paddle sont configurés par secrets (`PADDLE_PRICE_*`).
+
+---
+
+## Routes
+
+| Route | Page |
+|---|---|
+| `/` | Accueil (2 univers) |
+| `/boutique` | La Boutique en 2 étapes |
+| `/studio-live` | Présentation Studio Live + souscription |
+| `/studio/regie` | Régie abonné (3 onglets) |
+| `/live/:roomId` | Salle publique / co-animateur |
+| `/guide` | Guide & Tutoriel en 3 étapes |
+| `/assistant` | Assistant IA plein écran |
+| `/mon-espace` | Compte / commandes |
+| `/admin-videos` | Admin uniquement (`is_admin` ou `ADMIN_EMAILS`) |
+| `/cgv`, `/mentions-legales`, `/faq` | Pages légales |
+
+URL propres (path strategy) ; Netlify réécrit `/*` vers `index.html`.
+
+---
+
+## Stack & structure
 
 ```
 lib/
-  main.dart                     Entrée, thème, routes (/commande, /mon-espace, /admin-videos…)
-  core/
-    config.dart                 Tarifs FCFA, 6 kits métiers, 14 pays, liens
-    models.dart                 Modèles API (checkout, liens, livraison, vidéo, avis)
-    theme.dart                  Palette, motif bogolan, composants partagés
-    links.dart                  Ouverture de liens externes
-  services/
-    api.dart                    Appels Edge Functions + base Supabase
-    video_picker*.dart          Sélection vidéo (web via package:web, stub hors web)
-  widgets/
-    app_header.dart             En-tête + bouton Aide WhatsApp
-    site_assistant_chat.dart    Bulle de chat IA
-    whatsapp.dart               Boutons WhatsApp
-  pages/
-    landing_page.dart           Accueil, tarifs, kits, pays, notes & avis clients
-    commande_page.dart          Tunnel + attente de paiement
-    confirmation_page.dart      Liens de livraison + état de l'envoi email
-    auth_page.dart              Connexion / inscription automatique
-    dashboard_page.dart         Espace client (commandes, kits, régénération)
-    admin_videos_page.dart      /admin-videos
-    legal_pages.dart            CGV, mentions légales, FAQ
-
+  core/        countries.dart, pricing.dart, models.dart, app_state.dart, theme.dart
+  pages/       home, boutique, studio_live, studio_regie, live_room, guide,
+               assistant, paiement_en_attente, splash, admin_guard, légal
+  services/    api.dart, checkout_ouverture, jitsi_view, paddle_checkout,
+               telechargement, stockage_pays, url_strategy
+  widgets/     logo_ebooklive, app_header, country_picker, site_assistant_chat
 supabase/
-  config.toml                   Configuration des 10 Edge Functions
-  migrations/                   Schéma SQL (base, commandes/assistant/vidéo, avis)
-  functions/
-    _shared/                    config, SasPay, moteur de kit, livraison, IA, fulfillment
-    saspay-checkout/            Création commande + session de paiement
-    verify-payment/             Vérification SasPay + génération + livraison
-    saspay-webhook/             Webhook signé + livraison idempotente
-    generate-kit/               Régénération avec crédits
-    view-kit/                   Consultation / PDF protégé par jeton
-    welcome-email/              Email d'accueil Resend
-    site-assistant/             Chat IA DeepSeek (bulle du site)
-    youtube-live-bot/           Robot chat YouTube Live
-    video-agency-pipeline/      Agence vidéo (4 agents + distribution)
-    tiktok-auth/                OAuth TikTok (start / callback / status / disconnect)
+  functions/   * 16 Edge Functions (voir DEPLOIEMENT.md)
+  migrations/  20260101000500_paddle_et_studio_live.sql
+               20260101000600_studio_essai_gratuit.sql
+web/           index.html (splash SVG), favicon.svg, manifest, icônes
+test/          pricing_test, models_test, widget_test
+docs/          architecture, plan, revues DB/code, vérification build
 ```
+
+- **Design** : fond `#090D16`, verre `#111827`, dégradé or → émeraude,
+  logo vectoriel CustomPainter + SVG miroir.
+- **État global** : `CountryStore` (pays persisté, prix partout), `AssistantState`
+  (conversation partagée bulle / pleine page).
+- **Sécurité** : RLS sur les tables Studio, écritures service_role uniquement,
+  index uniques anti-rejeu paiement, webhooks signés (SasPay/Paddle), admin-check.
 
 ---
 
-## 🚦 Démarrage local
+## Développement
+
+Prérequis : Flutter 3.47.9+, Dart 3.13+, Node 20+ (outils), Supabase CLI.
 
 ```bash
 flutter pub get
+flutter analyze
+flutter test
+flutter build web --release --no-wasm-dry-run \
+  --dart-define=FLUTTER_WEB_CANVASKIT_URL=/canvaskit/
+```
+
+Lancer en local :
+
+```bash
 flutter run -d chrome \
-  --dart-define=SITE_URL=http://localhost:5000 \
+  --dart-define=SITE_URL=http://localhost:3000 \
   --dart-define=WHATSAPP_AIDE_NUMBER=22670123456
 ```
 
-Fonctions en local (nécessite Docker) :
-
-```bash
-supabase start
-supabase functions serve --env-file supabase/.env
-```
-
-> Les Edge Functions appellent les APIs externes : sans clés valides, la génération
-> échouera mais l'interface et le tunnel restent testables.
+La configuration Supabase (URL + clé publishable) est dans `lib/core/config.dart`.
 
 ---
 
-## 🧪 Vérifications
+## Déploiement
 
-```bash
-flutter analyze     # 0 erreur
-flutter test        # tests unitaires + widgets (accueil, tunnel mobile)
-flutter build web --release
-```
+Tout est détaillé dans [`DEPLOIEMENT.md`](DEPLOIEMENT.md) :
+1. appliquer les migrations (`supabase db push`) ;
+2. déployer les 16 Edge Functions (`supabase functions deploy`) ;
+3. renseigner les secrets (SasPay, Paddle + price IDs, Resend, DeepSeek, Gemini) ;
+4. configurer le webhook Paddle et le webhook SasPay ;
+5. vérifier `flutter analyze`, `flutter test`, `flutter build web --release` ;
+6. déployer sur Netlify (build command dans `netlify.toml`).
+
+Points de vigilance avant production :
+- créer les **price IDs Paddle EUR et USD** et les renseigner ;
+- dédoublonner `saspay_payment_id` avant l'index unique ;
+- tester la CSP Netlify en préproduction (CanvasKit local + Jitsi + Paddle) ;
+- trancher le risque F03 (accès régie par email sans confirmation d'email).
 
 ---
 
-## 🔐 Secrets et mise en production
+## Documentation
 
-Tout est détaillé dans **[DEPLOIEMENT.md](DEPLOIEMENT.md)** : liste complète des
-secrets Supabase, configuration SasPay / Resend / Google / YouTube / TikTok,
-déploiement des fonctions, puis GitHub et Netlify.
-
----
-
-## 📌 Règles à ne pas casser
-
-1. **Tarifs en FCFA uniquement** — jamais de DH ni d'USD affiché.
-2. **SasPay uniquement** — aucune autre solution de paiement.
-3. **Aucun fichier vidéo dans Supabase Storage** — métadonnées texte seulement.
-4. **La livraison n'a lieu qu'après un statut SasPay `SUCCESS`**, et une seule fois.
-5. **Aucune clé secrète dans Flutter ni dans Git** — seulement la clé *publishable*.
-
-© Kit Business — Offboard-Hub
+- [`docs/ARCHITECTURE_REFONTE.md`](docs/ARCHITECTURE_REFONTE.md) — contrat front/back/DB.
+- [`docs/PLAN_REFONTE.md`](docs/PLAN_REFONTE.md) — plan et matrice d'acceptation.
+- [`docs/REVUE_DB.md`](docs/REVUE_DB.md) — revue RLS/migration et contre-revue.
+- [`docs/REVUE_CODE.md`](docs/REVUE_CODE.md) — revue code/sécurité et contre-revue.
+- [`docs/BUILD_VERIFICATION.md`](docs/BUILD_VERIFICATION.md) — artefacts et release.
+- [`docs/tests_rls_studio.sql`](docs/tests_rls_studio.sql) — tests RLS manuels.

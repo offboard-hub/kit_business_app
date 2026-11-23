@@ -1,8 +1,9 @@
 // ============================================================================
-//  SasPay — SEUL prestataire de paiement de l'application (YouCan Pay désactivé).
+//  SasPay — prestataire des 23 pays africains + Inde (voir countries.ts).
 //  Documentation : https://docs.saspay.me — base https://api.saspay.me/api/v1
 //  Montants : chaînes décimales ("9000.00"), jamais de flottants.
-//  Devises : XOF (UEMOA) et XAF (CEMAC), c'est-à-dire 100 % FCFA.
+//  Devises : la devise locale du pays (XOF, XAF, NGN, KES, INR…), validée en
+//  amont par le référentiel countries.ts et recalculée par pricing.ts.
 // ============================================================================
 
 const BASE = (Deno.env.get("SASPAY_BASE_URL") ?? "https://api.saspay.me/api/v1").replace(/\/+$/, "");
@@ -72,8 +73,9 @@ export interface SessionCheckout {
  * Le client est redirigé vers `checkout_url`.
  */
 export async function creerSessionCheckout(params: {
-  montantFcfa: number;
-  devise: "XOF" | "XAF";
+  /** Montant dans la devise locale du pays (jamais envoyé par le client). */
+  montant: number;
+  devise: string;
   description: string;
   email: string;
   nom: string;
@@ -82,9 +84,14 @@ export async function creerSessionCheckout(params: {
   returnUrl: string;
   metadata?: Record<string, unknown>;
 }): Promise<SessionCheckout> {
+  const devise = (params.devise ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(devise)) {
+    throw new Error("Devise de paiement invalide.");
+  }
+
   const corps = {
-    amount: params.montantFcfa.toFixed(2),
-    currency: params.devise,
+    amount: Number(params.montant || 0).toFixed(2),
+    currency: devise,
     description: params.description,
     customer_email: params.email,
     customer_name: params.nom,

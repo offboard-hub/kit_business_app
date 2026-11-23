@@ -10,6 +10,8 @@ export interface OptionsIA {
   temperature?: number;
   maxTokens?: number;
   systeme?: string;
+  /** Délai maximum de l'appel réseau (ms). Défaut : 150 s (DeepSeek), 180 s (Gemini). */
+  timeoutMs?: number;
 }
 
 /** Appel DeepSeek (chat) — renvoie le texte brut du modèle. */
@@ -31,7 +33,7 @@ export async function appelDeepSeek(prompt: string, options: OptionsIA = {}): Pr
       messages,
       ...(options.json ? { response_format: { type: "json_object" } } : {}),
     }),
-    signal: AbortSignal.timeout(150_000),
+    signal: AbortSignal.timeout(options.timeoutMs ?? 150_000),
   });
 
   if (!reponse.ok) {
@@ -64,7 +66,7 @@ export async function appelGemini(prompt: string, options: OptionsIA = {}): Prom
           ...(options.json ? { responseMimeType: "application/json" } : {}),
         },
       }),
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 180_000),
     },
   );
 

@@ -3,12 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/app_state.dart';
 import '../core/config.dart';
+import '../core/countries.dart';
 import '../core/links.dart';
 import '../core/models.dart';
+import '../core/pricing.dart';
 import '../core/theme.dart';
 import '../services/api.dart';
 import '../widgets/app_header.dart';
+import '../widgets/country_picker.dart';
 import '../widgets/site_assistant_chat.dart';
 import '../widgets/whatsapp.dart';
 import 'auth_page.dart';
@@ -56,9 +60,8 @@ class _DashboardPageState extends State<DashboardPage> {
   List<Map<String, dynamic>> _kits = [];
   List<CommandeResume> _commandes = [];
 
-  String _metierCode = 'restaurant';
+  String _metierCode = 'ecommerce';
   Offre _offre = offres.last;
-  Pays _pays = paysAfricains.first;
 
   @override
   void initState() {
@@ -119,7 +122,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final resultat = await ApiService.regenererKit(
         metierCode: _metierCode,
         nomProjet: _nomProjet.text.trim(),
-        paysCode: _pays.code,
+        paysCode: CountryStore.pays.value.code,
         produitType: _offre.apiType,
         precisions: _precisions.text.trim(),
       );
@@ -503,9 +506,11 @@ class _DashboardPageState extends State<DashboardPage> {
                               style: const TextStyle(color: K.sand, fontSize: 13, fontWeight: FontWeight.w700),
                             ),
                             Text(
-              '${commande.metier} · ${AppConfig.fcfa(commande.montant)} · ${_dateCourte(commande.createdAt)}',
-              style: const TextStyle(color: K.mist, fontSize: 10.5),
-            ),
+                              '${commande.metier} · '
+                              '${commande.montantLocal != null && commande.devise != null ? Prix.formater(commande.montantLocal!, commande.devise!) : AppConfig.fcfa(commande.montant)}'
+                              ' · ${_dateCourte(commande.createdAt)}',
+                              style: const TextStyle(color: K.mist, fontSize: 10.5),
+                            ),
                           ],
                         ),
                       ),
@@ -578,101 +583,111 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _carteRegeneration() {
-    return GlassCard(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Régénérer un kit',
-            style: TextStyle(color: K.sand, fontSize: 16, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Utilisez vos crédits pour générer une nouvelle version avec d\'autres précisions.',
-            style: TextStyle(color: K.mist, fontSize: 12, height: 1.5),
-          ),
-          const SizedBox(height: 14),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _metierCode,
-              isExpanded: true,
-              dropdownColor: K.night,
-              style: const TextStyle(color: K.sand, fontSize: 13),
-              items: [
-                for (final kit in kitsMetiers)
-                  DropdownMenuItem(value: kit.code, child: Text('${kit.emoji}  ${kit.label}')),
-              ],
-              onChanged: (valeur) {
-                if (valeur != null) setState(() => _metierCode = valeur);
-              },
-            ),
-          ),
-          const Divider(color: Colors.white12),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<Offre>(
-              value: _offre,
-              isExpanded: true,
-              dropdownColor: K.night,
-              style: const TextStyle(color: K.sand, fontSize: 13),
-              items: [
-                for (final offre in offres)
-                  DropdownMenuItem(
-                    value: offre,
-                    child: Text('${offre.titre} — ${offre.prixAffiche} (${offre.credits} crédit)'),
+    return ValueListenableBuilder<PaysMonde>(
+      valueListenable: CountryStore.pays,
+      builder: (context, pays, _) {
+        return GlassCard(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Régénérer un kit',
+                style: TextStyle(color: K.sand, fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Utilisez vos crédits pour générer une nouvelle version avec d\'autres précisions.',
+                style: TextStyle(color: K.mist, fontSize: 12, height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _metierCode,
+                  isExpanded: true,
+                  dropdownColor: K.night,
+                  style: const TextStyle(color: K.sand, fontSize: 13),
+                  items: [
+                    for (final secteur in secteurs)
+                      DropdownMenuItem(
+                        value: secteur.code,
+                        child: Text('${secteur.emoji}  ${secteur.label}'),
+                      ),
+                  ],
+                  onChanged: (valeur) {
+                    if (valeur != null) setState(() => _metierCode = valeur);
+                  },
+                ),
+              ),
+              const Divider(color: Colors.white12),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<Offre>(
+                  value: _offre,
+                  isExpanded: true,
+                  dropdownColor: K.night,
+                  style: const TextStyle(color: K.sand, fontSize: 13),
+                  items: [
+                    for (final offre in offres)
+                      DropdownMenuItem(
+                        value: offre,
+                        child: Text(
+                          '${offre.titre} — ${Prix.devisKit(offre.prix, pays).principal} (${offre.credits} crédit)',
+                        ),
+                      ),
+                  ],
+                  onChanged: (valeur) {
+                    if (valeur != null) setState(() => _offre = valeur);
+                  },
+                ),
+              ),
+              const Divider(color: Colors.white12),
+              Row(
+                children: [
+                  const Icon(Icons.public_rounded, color: K.mist, size: 17),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Pays de facturation',
+                      style: TextStyle(color: K.mist, fontSize: 12),
+                    ),
                   ),
-              ],
-              onChanged: (valeur) {
-                if (valeur != null) setState(() => _offre = valeur);
-              },
-            ),
+                  const PaysSelector(compact: true),
+                ],
+              ),
+              const SizedBox(height: 8),
+              RoutePaiementBandeau(pays: pays, compact: true),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _nomProjet,
+                style: const TextStyle(color: K.sand),
+                decoration: champ(label: 'Nom du projet', icone: Icons.storefront_rounded),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _precisions,
+                maxLines: 2,
+                style: const TextStyle(color: K.sand),
+                decoration: champ(
+                  label: 'Précisions (optionnel)',
+                  icone: Icons.notes_rounded,
+                ),
+              ),
+              const SizedBox(height: 14),
+              OrButton(
+                label: 'Générer avec ${_offre.credits} crédit${_offre.credits > 1 ? 's' : ''}',
+                icone: Icons.auto_awesome_rounded,
+                chargement: _generation,
+                onPressed: _regenerer,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Crédits disponibles : $_credits',
+                style: const TextStyle(color: K.mist, fontSize: 11),
+              ),
+            ],
           ),
-          const Divider(color: Colors.white12),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<Pays>(
-              value: _pays,
-              isExpanded: true,
-              dropdownColor: K.night,
-              style: const TextStyle(color: K.sand, fontSize: 13),
-              items: [
-                for (final pays in paysAfricains)
-                  DropdownMenuItem(value: pays, child: Text('${pays.drapeau}  ${pays.nom}')),
-              ],
-              onChanged: (valeur) {
-                if (valeur != null) setState(() => _pays = valeur);
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _nomProjet,
-            style: const TextStyle(color: K.sand),
-            decoration: champ(label: 'Nom du projet', icone: Icons.storefront_rounded),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _precisions,
-            maxLines: 2,
-            style: const TextStyle(color: K.sand),
-            decoration: champ(
-              label: 'Précisions (optionnel)',
-              icone: Icons.notes_rounded,
-            ),
-          ),
-          const SizedBox(height: 14),
-          OrButton(
-            label: 'Générer avec ${_offre.credits} crédit${_offre.credits > 1 ? 's' : ''}',
-            icone: Icons.auto_awesome_rounded,
-            chargement: _generation,
-            onPressed: _regenerer,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Crédits disponibles : $_credits',
-            style: const TextStyle(color: K.mist, fontSize: 11),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

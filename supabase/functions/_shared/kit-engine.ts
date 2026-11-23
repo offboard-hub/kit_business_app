@@ -1,6 +1,6 @@
 // ============================================================================
 //  MOTEUR DE GÉNÉRATION DU KIT — Gemini + DeepSeek + Google Sheets
-//  Contexte : Afrique francophone, montants en FCFA, mobile money, WhatsApp.
+//  Contexte : Afrique francophone et international, devise locale, mobile money, WhatsApp.
 //  Aucun fichier n'est stocké : tout est du texte en base + lien Google Sheet.
 // ============================================================================
 
@@ -52,12 +52,13 @@ function contexte(input: KitInput): string {
     ? `Précisions du client : "${input.precisions.trim()}".`
     : "Aucune précision supplémentaire.";
 
-  return `Marché : ${input.paysLabel} (zone FCFA, devise ${input.devise}).
+  return `Marché : ${input.paysLabel} (devise locale : ${input.devise}).
 Projet : "${input.nomProjet}" — secteur : ${input.metierLabel}.
 ${precision}
 Réalité locale à intégrer : mobile money (Orange Money, Wave, MTN MoMo, Moov Money), WhatsApp Business,
 livraison à moto et à domicile, pouvoir d'achat local, saisonnalité, méfiance envers les promesses,
-concurrence du marché informel. Tous les montants doivent être exprimés en FCFA.`;
+concurrence du marché informel. Tous les montants doivent être exprimés dans la devise locale
+(${input.devise}), avec des ordres de grandeur réalistes pour le pays.`;
 }
 
 async function produireStrategie(input: KitInput): Promise<Record<string, unknown>> {
@@ -73,10 +74,10 @@ Réponds UNIQUEMENT avec un JSON valide :
   "diagnostic_brutal": "3 phrases maximum, sans complaisance",
   "hemorragie_invisible": "la fuite de cash ou de clients la plus coûteuse",
   "leviers_secret": [
-    {"nom_levier": "...", "mecanisme": "...", "action_immediate": "...", "gain_estime_fcfa": 250000}
+    {"nom_levier": "...", "mecanisme": "...", "action_immediate": "...", "gain_estime": 250000}
   ],
   "chiffres_cles": [
-    {"indicateur": "...", "valeur_fcfa": 150000, "commentaire": "..."}
+    {"indicateur": "...", "valeur": 150000, "commentaire": "..."}
   ],
   "plan_livre_anti_blabla": "plan de 3 semaines, orienté exécution",
   "architecture_sheet_intelligent": "colonnes, formules et ratios à automatiser",
@@ -97,11 +98,11 @@ Rédige un LIVRE STRATÉGIQUE complet et actionnable (2 000 à 2 500 mots) en HT
 sans Markdown, sans commentaire, avec uniquement : <h1>, <h2>, <h3>, <p>, <ul>, <li>, <strong>, <table>, <tr>, <td>.
 Structure imposée :
 1. Le diagnostic sans filtre de "${input.nomProjet}".
-2. Le modèle économique chiffré en FCFA (coûts fixes, coût de revient, prix de vente, marge, point mort).
+2. Le modèle économique chiffré dans la devise locale (coûts fixes, coût de revient, prix de vente, marge, point mort).
 3. Les 5 leviers de croissance, chacun avec une action à faire dans les 48 heures.
 4. Les scripts exacts : message WhatsApp de prospection, relance, demande d'avis client.
 5. Le tableau de bord à tenir (indicateurs + fréquence).
-6. Les erreurs qui tuent l'entreprise (avec le coût en FCFA).
+6. Les erreurs qui tuent l'entreprise (avec le coût dans la devise locale).
 7. Le plan d'action jour par jour sur 21 jours.
 
 Chaque chiffre doit sembler réaliste pour le pays indiqué. Aucune promesse magique.`;
@@ -150,7 +151,7 @@ Renvoie UNIQUEMENT un objet JSON pur :
 Contraintes :
 - 4 à 8 colonnes maximum, 15 à 25 lignes de données réalistes.
 - Formules Google Sheets en anglais (=IF, =SUM, =AVERAGE, =IFERROR) et références de cellules valides.
-- Inclure un bloc "Point mort" calculé avec les prix en FCFA.
+- Inclure un bloc "Point mort" calculé avec les prix dans la devise locale.
 - Aucun texte hors du JSON.`;
 
   try {

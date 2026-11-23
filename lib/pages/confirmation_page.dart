@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../core/config.dart';
 import '../core/links.dart';
 import '../core/models.dart';
+import '../core/pricing.dart';
 import '../core/theme.dart';
 import '../services/api.dart';
 import '../widgets/app_header.dart';
@@ -144,7 +145,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
                           Text(
                             paid
                                 ? 'Vos liens sont ci-dessous. Ils ont aussi été envoyés par email à l\'adresse indiquée.'
-                                : 'Dès que SasPay confirme le paiement, votre kit est généré et livré automatiquement.',
+                                : 'Dès que le paiement est confirmé, votre kit est généré et livré automatiquement.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: K.mist, fontSize: 13.5, height: 1.55),
                           ),
@@ -248,7 +249,12 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
   Widget _resume(ResultatCommande? resultat) {
     final nom = resultat?.nomProjet ?? widget.nomProjet;
     final metier = resultat?.metier ?? widget.metier;
-    final montant = resultat?.montant ?? widget.montant;
+    final montantLocal = resultat?.montantLocal;
+    final devise = resultat?.devise;
+    final montantFcfa = resultat?.montant ?? widget.montant;
+    final montant = montantLocal != null && devise != null && devise.isNotEmpty
+        ? Prix.formater(montantLocal, devise)
+        : (montantFcfa != null ? AppConfig.fcfa(montantFcfa) : null);
     final offre = resultat?.produitType == null ? null : offreParApiType(resultat!.produitType!);
 
     return GlassCard(
@@ -257,7 +263,7 @@ class _ConfirmationPageState extends State<ConfirmationPage> {
           if (nom != null) _ligne('Projet', nom),
           if (metier != null) _ligne('Kit métier', metier),
           if (offre != null) _ligne('Offre', offre.titre),
-          if (montant != null) _ligne('Montant payé', AppConfig.fcfa(montant)),
+          if (montant != null) _ligne('Montant payé', montant),
           if (resultat?.whatsapp != null) _ligne('WhatsApp', resultat!.whatsapp!),
         ],
       ),
