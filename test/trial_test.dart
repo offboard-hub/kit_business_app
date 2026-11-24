@@ -34,6 +34,21 @@ void main() {
       expect(essai.libelle, 'Votre essai est terminé');
     });
 
+    test('fromJson lit live_subscriptions et expose le décompte heures/minutes', () {
+      final essai = EssaiStudio.fromJson(<String, dynamic>{
+        'user_id': 'user-1',
+        'trial_started_at': '2026-01-01T10:00:00Z',
+        'trial_ends_at': '2026-01-04T10:00:00Z',
+        'is_trial': true,
+      });
+
+      expect(essai.startedAt, DateTime.parse('2026-01-01T10:00:00Z'));
+      expect(essai.endsAt, DateTime.parse('2026-01-04T10:00:00Z'));
+      expect(essai.estActif, isFalse);
+      expect(essai.compteARebours, 'terminé');
+      expect(essai.libelle, 'Votre essai est terminé');
+    });
+
     test('fromJson retombe sur 3 jours si ends_at manque', () {
       final essai = EssaiStudio.fromJson(<String, dynamic>{
         'user_id': 'user-1',

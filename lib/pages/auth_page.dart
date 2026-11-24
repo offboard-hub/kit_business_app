@@ -54,16 +54,13 @@ class _AuthPageState extends State<AuthPage> {
       } on AuthException catch (erreur) {
         if (!erreur.message.toLowerCase().contains('invalid login credentials')) rethrow;
 
-        final creation = await auth.signUp(email: email, password: motDePasse);
-        if (creation.session == null) {
-          if (!mounted) return;
-          _toast(
-            'Compte créé. Confirmez votre email pour vous connecter (option à désactiver dans Supabase).',
-            K.gold,
-          );
-          setState(() => _chargement = false);
-          return;
-        }
+        // Compte créé côté serveur (confirmé), sans dépendre du SMTP Supabase.
+        await ApiService.creerCompte(
+          email: email,
+          motDePasse: motDePasse,
+          nom: email.split('@').first,
+        );
+        await auth.signInWithPassword(email: email, password: motDePasse);
       }
 
       // Email d'accueil informatif, sans lien de confirmation.

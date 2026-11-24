@@ -111,7 +111,7 @@ class _AppHeaderState extends State<AppHeader> {
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
           child: LayoutBuilder(
             builder: (context, contraintes) {
-              final large = contraintes.maxWidth >= 900;
+              final large = contraintes.maxWidth >= 1020;
               final moyen = contraintes.maxWidth >= 700;
 
               return Row(
@@ -119,33 +119,27 @@ class _AppHeaderState extends State<AppHeader> {
                   Flexible(child: _LogoBouton(onTap: _accueil)),
                   const Spacer(),
                   if (large)
-                    Flexible(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Flexible(
-                            child: _LienNav(
-                              label: 'La Boutique',
-                              route: '/boutique',
-                              onTap: () => _aller('/boutique'),
-                            ),
-                          ),
-                          Flexible(
-                            child: _LienNav(
-                              label: 'Studio Live',
-                              route: '/studio-live',
-                              onTap: () => _aller('/studio-live'),
-                            ),
-                          ),
-                          Flexible(
-                            child: _LienNav(
-                              label: 'Guide & Tutoriel',
-                              route: '/guide',
-                              onTap: () => _aller('/guide'),
-                            ),
-                          ),
-                        ],
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        _LienNav(
+                          label: 'La Boutique',
+                          route: '/boutique',
+                          onTap: () => _aller('/boutique'),
+                        ),
+                        const SizedBox(width: 2),
+                        _LienNav(
+                          label: 'Studio Live',
+                          route: '/studio-live',
+                          onTap: () => _aller('/studio-live'),
+                        ),
+                        const SizedBox(width: 2),
+                        _LienNav(
+                          label: 'Guide & Tutoriel',
+                          route: '/guide',
+                          onTap: () => _aller('/guide'),
+                        ),
+                      ],
                     ),
                   const SizedBox(width: 10),
                   if (widget.afficherAide && contraintes.maxWidth >= 420) ...<Widget>[
@@ -333,10 +327,10 @@ class _LienNavState extends State<_LienNav> {
           child: Text(
             widget.label,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            softWrap: false,
             style: TextStyle(
               color: actif ? K.or : (_survol ? K.text : K.muted),
-              fontSize: 13,
+              fontSize: 12.8,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.1,
             ),

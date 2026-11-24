@@ -45,6 +45,7 @@ class _AdminVideosPageState extends State<AdminVideosPage> {
   ProjetVideo? _projet;
   VideoSelection? _fichier;
   List<Map<String, dynamic>> _historique = [];
+  Map<String, int> _essais = const <String, int>{};
 
   // --- Connexion TikTok (OAuth) ---
   bool _tiktokChargement = false;
@@ -94,7 +95,14 @@ class _AdminVideosPageState extends State<AdminVideosPage> {
     if (admin) {
       _chargerHistorique();
       _chargerStatutTiktok();
+      _chargerEssais();
     }
+  }
+
+  Future<void> _chargerEssais() async {
+    final compteur = await ApiService.compterEssaisAdmin();
+    if (!mounted) return;
+    setState(() => _essais = compteur);
   }
 
   // --------------------------------------------------------------------------
@@ -697,6 +705,8 @@ class _AdminVideosPageState extends State<AdminVideosPage> {
                             style: TextStyle(color: K.mist, fontSize: 12.5, height: 1.5),
                           ),
                           const SizedBox(height: 14),
+                          _blocEssais(),
+                          const SizedBox(height: 18),
                           _blocTiktok(),
                           const SizedBox(height: 18),
                           _blocBrief(),
@@ -721,6 +731,82 @@ class _AdminVideosPageState extends State<AdminVideosPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  Widget _blocEssais() {
+    final total = _essais['total'] ?? 0;
+    final actifs = _essais['actifs'] ?? 0;
+    final aujourdhui = _essais['aujourdhui'] ?? 0;
+    final semaine = _essais['sept_derniers_jours'] ?? 0;
+
+    Widget metrique(String label, int valeur, IconData icone, Color couleur) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: K.night.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: couleur.withValues(alpha: 0.28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icone, size: 17, color: couleur),
+              const SizedBox(height: 9),
+              Text(
+                '$valeur',
+                style: TextStyle(color: couleur, fontSize: 24, fontWeight: FontWeight.w900),
+              ),
+              Text(label, style: const TextStyle(color: K.mist, fontSize: 10.5)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.card_giftcard_rounded, color: K.gold, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Essais gratuits Studio Live',
+                  style: TextStyle(color: K.sand, fontSize: 14, fontWeight: FontWeight.w800),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _chargerEssais,
+                icon: const Icon(Icons.refresh_rounded, size: 15, color: K.mist),
+                label: const Text('Actualiser', style: TextStyle(color: K.mist, fontSize: 11)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              metrique('Total', total, Icons.groups_rounded, K.gold),
+              const SizedBox(width: 8),
+              metrique('Actifs', actifs, Icons.bolt_rounded, K.success),
+              const SizedBox(width: 8),
+              metrique("Aujourd'hui", aujourdhui, Icons.today_rounded, K.mist),
+              const SizedBox(width: 8),
+              metrique('7 jours', semaine, Icons.date_range_rounded, K.clay),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Chaque essai est unique, nominatif et limité à 3 jours. Aucun prélèvement.',
+            style: TextStyle(color: K.mist, fontSize: 10.5, height: 1.4),
+          ),
+        ],
       ),
     );
   }

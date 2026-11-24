@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Ouverture de votre document — e-booklive</title>
+  <style>
+    :root { color-scheme: dark; }
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:radial-gradient(circle at 20% 20%,rgba(52,211,153,.15),transparent 35%),
+                 radial-gradient(circle at 80% 10%,rgba(231,184,75,.16),transparent 35%),#07101F;
+      color:#F3E9D2;font-family:Arial,Helvetica,sans-serif}
+    .carte{max-width:480px;background:#111827;border:1px solid rgba(231,184,75,.3);border-radius:18px;padding:28px;text-align:center}
+    h1{font-size:20px;margin:0 0 10px;color:#E7B84B}
+    p{color:#A7B0C0;font-size:13px;line-height:1.6;margin:0 0 18px}
+    button{background:#E7B84B;color:#07101F;border:0;border-radius:12px;padding:13px 20px;font-weight:800;font-size:14px;cursor:pointer}
+    a{color:#34D399}
+    .petit{font-size:11px;color:#64748B;margin-top:16px}
+  </style>
+</head>
+<body>
+  <main class="carte">
+    <h1>Ouverture de votre document</h1>
+    <p>Votre document sécurisé se prépare. Si rien ne se passe, cliquez sur le bouton ci-dessous.</p>
+    <form id="ouverture" method="post" action="https://ynephuutnazdnjhsdlsy.supabase.co/functions/v1/view-kit">
+      <button type="submit">Ouvrir mon document</button>
+    </form>
+    <p class="petit">Document personnel · e-booklive</p>
+  </main>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var form = document.getElementById('ouverture');
+      ['id', 'token', 'type'].forEach(function (cle) {
+        var champ = document.createElement('input');
+        champ.type = 'hidden';
+        champ.name = cle;
+        champ.value = params.get(cle) || (cle === 'type' ? 'livre' : '');
+        form.appendChild(champ);
+      });
+      if (params.get('id')) form.submit();
+    })();
+  </script>
+</body>
+</html>

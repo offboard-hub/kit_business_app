@@ -435,13 +435,34 @@ class EssaiStudio {
     return (restant.inHours / 24).ceil().clamp(0, 3).toInt();
   }
 
+  int get heuresRestantes {
+    final restant = endsAt.difference(DateTime.now());
+    if (restant.isNegative) return 0;
+    return restant.inHours.clamp(0, 72).toInt();
+  }
+
+  /// Décompte lisible : « 2 j 14 h », « 3 h 12 min » ou « 8 min ».
+  String get compteARebours {
+    final restant = endsAt.difference(DateTime.now());
+    if (restant.isNegative || restant.inSeconds <= 0) return 'terminé';
+    final jours = restant.inDays;
+    final heures = restant.inHours.remainder(24);
+    final minutes = restant.inMinutes.remainder(60);
+    if (jours > 0) return '$jours j $heures h';
+    if (heures > 0) return '$heures h $minutes min';
+    return '${minutes < 1 ? 1 : minutes} min';
+  }
+
   String get libelle => estActif
-      ? 'Essai gratuit · $joursRestants j restants'
+      ? 'Essai gratuit · $compteARebours restants'
       : 'Votre essai est terminé';
 
   factory EssaiStudio.fromJson(Map<String, dynamic> json) {
-    final debut = DateTime.tryParse('${json['started_at']}') ?? DateTime.now();
-    final fin = DateTime.tryParse('${json['ends_at']}') ??
+    final debut = DateTime.tryParse(
+          '${json['trial_started_at'] ?? json['started_at'] ?? ''}',
+        ) ??
+        DateTime.now();
+    final fin = DateTime.tryParse('${json['trial_ends_at'] ?? json['ends_at'] ?? ''}') ??
         debut.add(const Duration(days: EssaiStudio.dureeJours));
     return EssaiStudio(
       userId: '${json['user_id'] ?? ''}',

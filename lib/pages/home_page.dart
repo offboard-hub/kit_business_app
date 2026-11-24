@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
@@ -281,13 +283,37 @@ class _TitreDegrade extends StatelessWidget {
   }
 }
 
-class _VisuelHero extends StatelessWidget {
+class _VisuelHero extends StatefulWidget {
   const _VisuelHero();
+
+  @override
+  State<_VisuelHero> createState() => _VisuelHeroState();
+}
+
+class _VisuelHeroState extends State<_VisuelHero> {
+  bool _cameraProduits = true;
+  int _phase = 0;
+  Timer? _minuteur;
+
+  @override
+  void initState() {
+    super.initState();
+    _minuteur = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      setState(() => _phase = (_phase + 1) % 4);
+    });
+  }
+
+  @override
+  void dispose() {
+    _minuteur?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 390,
+      height: 430,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
@@ -302,146 +328,125 @@ class _VisuelHero extends StatelessWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: <Widget>[
-                        const DecoratedBox(
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 550),
+                          curve: Curves.easeOutCubic,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: <Color>[
-                                Color(0xFF12251F),
-                                Color(0xFF0C1820),
-                                Color(0xFF111827),
-                              ],
+                              colors: _cameraProduits
+                                  ? const <Color>[
+                                      Color(0xFF10251F),
+                                      Color(0xFF0C1820),
+                                      Color(0xFF111827),
+                                    ]
+                                  : const <Color>[
+                                      Color(0xFF1A2030),
+                                      Color(0xFF141A2A),
+                                      Color(0xFF111827),
+                                    ],
                             ),
                           ),
                         ),
                         Positioned(
-                          right: -40,
-                          top: -40,
+                          right: -55,
+                          top: -70,
                           child: Container(
-                            width: 200,
-                            height: 200,
+                            width: 230,
+                            height: 230,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: <Color>[
-                                  K.emeraude.withValues(alpha: 0.24),
+                                  (_cameraProduits ? K.emeraude : K.or)
+                                      .withValues(alpha: 0.23),
                                   Colors.transparent,
                                 ],
                               ),
                             ),
                           ),
                         ),
-                        Center(
-                          child: Container(
-                            width: 62,
-                            height: 62,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: K.marque,
-                              boxShadow: <BoxShadow>[
-                                BoxShadow(
-                                  color: K.or.withValues(alpha: 0.35),
-                                  blurRadius: 30,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              color: K.bg,
-                              size: 34,
-                            ),
+                        Positioned(
+                          top: 13,
+                          left: 13,
+                          right: 13,
+                          child: _OngletsVitrine(
+                            cameraProduits: _cameraProduits,
+                            onCamera: () => setState(() => _cameraProduits = true),
+                            onEcran: () => setState(() => _cameraProduits = false),
                           ),
                         ),
                         Positioned(
-                          top: 16,
-                          left: 16,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: K.bg.withValues(alpha: 0.62),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Icon(Icons.circle, size: 7, color: K.emeraude),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Caméra produits · TikTok',
-                                  style: TextStyle(color: K.text, fontSize: 10, fontWeight: FontWeight.w700),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Positioned(
+                          top: 62,
                           left: 16,
                           right: 16,
-                          bottom: 16,
-                          child: Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    const Text(
-                                      'Robe wax édition limitée',
-                                      style: TextStyle(
-                                        color: K.text,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    ValueListenableBuilder<PaysMonde>(
-                                      valueListenable: CountryStore.pays,
-                                      builder: (context, pays, _) {
-                                        final prix = Prix.devisKit(9000, pays);
-                                        return Text(
-                                          '${prix.principal} · commande en direct',
-                                          style: const TextStyle(color: K.orSoft, fontSize: 11.5),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 350),
+                            child: _cameraProduits
+                                ? _ProduitVitrine(key: const ValueKey<String>('camera'))
+                                : _EcranVitrine(key: const ValueKey<String>('ecran')),
+                          ),
+                        ),
+                        Positioned(
+                          left: 12,
+                          right: 12,
+                          bottom: 12,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (child, animation) => FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0, 0.08),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
                               ),
-                              const SizedBox(width: 10),
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: K.emeraude.withValues(alpha: 0.16),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: K.emeraude.withValues(alpha: 0.5)),
-                                ),
-                                child: const Icon(Icons.shopping_bag_rounded, color: K.emeraude, size: 20),
-                              ),
-                            ],
+                            ),
+                            child: _phase == 0
+                                ? const _BulleChat(
+                                    key: ValueKey<String>('question'),
+                                    texte: 'Bonjour, la robe wax est disponible en taille M ?',
+                                    auteur: 'Client · TikTok',
+                                    assistant: false,
+                                  )
+                                : _phase == 1
+                                    ? const _BulleChat(
+                                        key: ValueKey<String>('reponse'),
+                                        texte:
+                                            'Oui, il en reste 4 en taille M. Je vous envoie le lien de paiement sécurisé.',
+                                        auteur: 'Awa IA · réponse instantanée',
+                                        assistant: true,
+                                      )
+                                    : _phase == 2
+                                        ? const _MiniPaiement(key: ValueKey<String>('paiement'))
+                                        : const _MiniPaiement(
+                                            key: ValueKey<String>('paiement-final'),
+                                            confirme: true,
+                                          ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
                     child: Row(
                       children: <Widget>[
                         Container(
-                          width: 34,
-                          height: 34,
+                          width: 30,
+                          height: 30,
                           decoration: BoxDecoration(
                             color: K.emeraude.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.auto_awesome_rounded, color: K.emeraude, size: 17),
+                          child: const Icon(Icons.auto_awesome_rounded, color: K.emeraude, size: 15),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 9),
                         const Expanded(
                           child: Text(
-                            'Le chat IA répond aux spectateurs pendant que vous vendez.',
+                            'Le chat IA répond, propose le paiement et confirme la commande.',
                             style: TextStyle(color: K.muted, fontSize: 10.5, height: 1.4),
                           ),
                         ),
@@ -452,17 +457,293 @@ class _VisuelHero extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            left: -14,
-            bottom: 26,
-            child: _PastilleFlottante(
-              icone: Icons.menu_book_rounded,
-              titre: 'Livre Guide offert',
-              sousTitre: 'avec l\'abonnement Studio Live',
-              couleur: K.or,
+          if (_phase >= 2)
+            Positioned(
+              left: -14,
+              bottom: 58,
+              child: AnimatedOpacity(
+                opacity: _phase == 3 ? 1 : 0.82,
+                duration: const Duration(milliseconds: 300),
+                child: _PastilleFlottante(
+                  icone: Icons.check_circle_rounded,
+                  titre: _phase == 3 ? 'Commande confirmée' : 'Paiement sécurisé',
+                  sousTitre: _phase == 3 ? 'Robe wax · 9 000 FCFA' : 'Lien envoyé au client',
+                  couleur: K.emeraude,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OngletsVitrine extends StatelessWidget {
+  const _OngletsVitrine({
+    required this.cameraProduits,
+    required this.onCamera,
+    required this.onEcran,
+  });
+
+  final bool cameraProduits;
+  final VoidCallback onCamera;
+  final VoidCallback onEcran;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _OngletVitrine(
+            label: 'Caméra Produits',
+            icone: Icons.videocam_rounded,
+            actif: cameraProduits,
+            onTap: onCamera,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: _OngletVitrine(
+            label: 'Partage d\'Écran',
+            icone: Icons.screen_share_rounded,
+            actif: !cameraProduits,
+            onTap: onEcran,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OngletVitrine extends StatelessWidget {
+  const _OngletVitrine({
+    required this.label,
+    required this.icone,
+    required this.actif,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icone;
+  final bool actif;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          decoration: BoxDecoration(
+            color: actif ? K.surface.withValues(alpha: 0.82) : K.bg.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: actif ? K.or.withValues(alpha: 0.45) : Colors.white.withValues(alpha: 0.09),
             ),
           ),
-        ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icone, size: 13, color: actif ? K.or : K.faint),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: actif ? K.text : K.faint,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProduitVitrine extends StatelessWidget {
+  const _ProduitVitrine({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Robe wax édition limitée',
+          style: TextStyle(color: K.text, fontSize: 15, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 3),
+        ValueListenableBuilder<PaysMonde>(
+          valueListenable: CountryStore.pays,
+          builder: (context, pays, _) {
+            final prix = Prix.devisKit(9000, pays);
+            return Text(
+              '${prix.principal} · stock M : 4',
+              style: const TextStyle(color: K.orSoft, fontSize: 11),
+            );
+          },
+        ),
+        const SizedBox(height: 14),
+        Center(
+          child: Container(
+            width: 86,
+            height: 86,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: K.marque,
+              boxShadow: <BoxShadow>[
+                BoxShadow(color: K.or.withValues(alpha: 0.3), blurRadius: 28),
+              ],
+            ),
+            child: const Icon(Icons.play_arrow_rounded, color: K.bg, size: 44),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EcranVitrine extends StatelessWidget {
+  const _EcranVitrine({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Row(
+          children: <Widget>[
+            Icon(Icons.screen_share_rounded, color: K.or, size: 15),
+            SizedBox(width: 6),
+            Text(
+              'Partage d\'écran · fiche produit',
+              style: TextStyle(color: K.text, fontSize: 12.5, fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          height: 92,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: K.bg.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(width: 150, height: 7, decoration: BoxDecoration(color: K.or.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4))),
+              const SizedBox(height: 8),
+              Container(width: 220, height: 6, decoration: BoxDecoration(color: K.muted.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(4))),
+              const SizedBox(height: 6),
+              Container(width: 180, height: 6, decoration: BoxDecoration(color: K.emeraude.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(4))),
+              const Spacer(),
+              const Text(
+                'Tableau de ventes · stock · marge',
+                style: TextStyle(color: K.faint, fontSize: 8.5),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BulleChat extends StatelessWidget {
+  const _BulleChat({
+    super.key,
+    required this.texte,
+    required this.auteur,
+    required this.assistant,
+  });
+
+  final String texte;
+  final String auteur;
+  final bool assistant;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: assistant ? Alignment.centerLeft : Alignment.centerRight,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 300),
+        padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+        decoration: BoxDecoration(
+          color: assistant ? K.emeraude.withValues(alpha: 0.12) : K.or.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: assistant ? K.emeraude.withValues(alpha: 0.3) : K.or.withValues(alpha: 0.28),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              auteur,
+              style: TextStyle(
+                color: assistant ? K.emeraude : K.or,
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(texte, style: const TextStyle(color: K.text, fontSize: 10.5, height: 1.4)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniPaiement extends StatelessWidget {
+  const _MiniPaiement({super.key, this.confirme = false});
+
+  final bool confirme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: K.emeraude.withValues(alpha: confirme ? 0.16 : 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: K.emeraude.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(confirme ? Icons.check_circle_rounded : Icons.lock_rounded, color: K.emeraude, size: 17),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  confirme ? 'Commande confirmée' : 'Lien de paiement sécurisé',
+                  style: const TextStyle(color: K.text, fontSize: 10.5, fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  confirme ? 'Robe wax · paiement reçu' : 'SasPay / Paddle · en 1 clic',
+                  style: const TextStyle(color: K.faint, fontSize: 8.5),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -900,8 +1181,10 @@ class _PrixStudio extends StatelessWidget {
         final principal = devis.devise == 'USD'
             ? '10,00 \$'
             : devis.principal;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        return Wrap(
+          crossAxisAlignment: WrapCrossAlignment.end,
+          spacing: 7,
+          runSpacing: 3,
           children: <Widget>[
             Text(
               principal,
@@ -912,7 +1195,6 @@ class _PrixStudio extends StatelessWidget {
                 letterSpacing: -0.6,
               ),
             ),
-            const SizedBox(width: 7),
             const Padding(
               padding: EdgeInsets.only(bottom: 4),
               child: Text(
@@ -921,7 +1203,6 @@ class _PrixStudio extends StatelessWidget {
               ),
             ),
             if (devis.indicatif != null) ...<Widget>[
-              const SizedBox(width: 7),
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(

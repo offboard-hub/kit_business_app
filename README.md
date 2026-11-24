@@ -151,4 +151,6 @@ Points de vigilance avant production :
 - [`docs/REVUE_CODE.md`](docs/REVUE_CODE.md) — revue code/sécurité et contre-revue.
 - [`docs/BUILD_VERIFICATION.md`](docs/BUILD_VERIFICATION.md) — artefacts et release.
 - [`docs/PADDLE_SANDBOX_TEST.md`](docs/PADDLE_SANDBOX_TEST.md) — audit sandbox et procédure de test Paddle.
+- [`docs/RAPPORT_FINITIONS_2026-11-24.md`](docs/RAPPORT_FINITIONS_2026-11-24.md) — rapport des finitions, tests Supabase et rendu éditorial.
+- [`docs/SEO_GOOGLE_SEARCH_CONSOLE.md`](docs/SEO_GOOGLE_SEARCH_CONSOLE.md) — vérification Google Search Console, robots et sitemap.
 - [`docs/tests_rls_studio.sql`](docs/tests_rls_studio.sql) — tests RLS manuels.

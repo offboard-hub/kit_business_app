@@ -215,8 +215,8 @@ export interface AccesSession {
 
 export interface StudioEssai {
   user_id: string;
-  started_at: string;
-  ends_at: string;
+  trial_started_at: string;
+  trial_ends_at: string;
   created_at: string;
 }
 
@@ -225,8 +225,8 @@ export async function chargerEssai(userId: string | null): Promise<StudioEssai |
   if (!userId) return null;
   const admin = adminClient();
   const { data, error } = await admin
-    .from("studio_trials")
-    .select("user_id, started_at, ends_at, created_at")
+    .from("live_subscriptions")
+    .select("user_id, trial_started_at, trial_ends_at, created_at")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(`Lecture de l'essai Studio impossible : ${error.message}`);
@@ -235,7 +235,7 @@ export async function chargerEssai(userId: string | null): Promise<StudioEssai |
 
 export function essaiActif(essai: StudioEssai | null): boolean {
   if (!essai) return false;
-  return new Date(essai.ends_at).getTime() > Date.now();
+  return new Date(essai.trial_ends_at).getTime() > Date.now();
 }
 
 /** L'accès à une salle est-il actif (abonnement payé ou essai non expiré) ? */
@@ -837,10 +837,60 @@ Réponds UNIQUEMENT avec le code HTML, sans commentaire ni balise Markdown.`;
 //  GÉNÉRATION ET PERSISTANCE DU GUIDE
 // ----------------------------------------------------------------------------
 
-/**
- * Génère (ou renvoie) le Livre Guide Live d'un abonnement.
- * Idempotent : un guide PRET n'est jamais régénéré ni ré-envoyé par email.
- */
+function illustrationGuide(index: number): string {
+  const svg = [
+    `<svg viewBox="0 0 760 110" aria-hidden="true"><rect x="10" y="12" width="220" height="86" rx="14" fill="#0B1B33" stroke="#E7B84B" stroke-opacity=".45"/><rect x="34" y="34" width="145" height="9" rx="4" fill="#E7B84B" opacity=".8"/><rect x="34" y="56" width="110" height="7" rx="3" fill="#34D399" opacity=".6"/><rect x="34" y="76" width="128" height="7" rx="3" fill="#94A3B8" opacity=".45"/><path d="M260 55 H340" stroke="#E7B84B" stroke-dasharray="6 6"/><circle cx="372" cy="55" r="22" fill="#0B1B33" stroke="#34D399" stroke-width="2"/><path d="M363 55 l7 7 l14 -16" fill="none" stroke="#34D399" stroke-width="4"/><rect x="425" y="16" width="310" height="80" rx="14" fill="#0B1B33" stroke="#34D399" stroke-opacity=".35"/><path d="M450 78 L510 42 L560 62 L630 26 L700 38" fill="none" stroke="#E7B84B" stroke-width="3"/></svg>`,
+    `<svg viewBox="0 0 760 110" aria-hidden="true"><rect x="30" y="16" width="200" height="78" rx="16" fill="#0B1B33" stroke="#E7B84B" stroke-opacity=".4"/><circle cx="130" cy="55" r="25" fill="none" stroke="#34D399" stroke-width="3"/><circle cx="130" cy="55" r="9" fill="#E7B84B"/><circle cx="255" cy="30" r="6" fill="#F87171"/><rect x="270" y="22" width="85" height="16" rx="8" fill="#111827" stroke="#F87171" stroke-opacity=".4"/><text x="280" y="33" fill="#F87171" font-size="9" font-family="Arial" font-weight="bold">LIVE</text><rect x="390" y="14" width="345" height="84" rx="14" fill="#0B1B33" stroke="#34D399" stroke-opacity=".35"/><rect x="412" y="34" width="170" height="9" rx="4" fill="#34D399" opacity=".75"/><rect x="412" y="56" width="130" height="7" rx="3" fill="#94A3B8" opacity=".5"/><rect x="412" y="74" width="155" height="7" rx="3" fill="#E7B84B" opacity=".55"/></svg>`,
+  ];
+  return `<figure class="guide-illu">${svg[index % svg.length]}</figure>`;
+}
+
+function habillerGuideEditorial(html: string, abonnement: StudioAbonnement): string {
+  if (!html.includes("<body") || !html.includes("</head>")) return html;
+  const couverture = `<section class="guide-cover">
+    <p class="guide-kicker">Édition premium · Studio Live</p>
+    <h1>Votre Livre Guide Live</h1>
+    <p class="guide-sous-titre">${echapper(abonnement.nom_activite)} · ${echapper(abonnement.metier_label ?? abonnement.metier_code)}</p>
+    <div class="guide-badges">
+      <span>${echapper(abonnement.metier_label ?? abonnement.metier_code)}</span>
+      <span>${echapper(abonnement.pays_label ?? abonnement.pays_code)}</span>
+      <span>${echapper(abonnement.devise)}</span>
+    </div>
+  </section>`;
+  const conseils = [
+    "Préparez votre fiche produit avant d'ouvrir la salle : prix, stock, taille et lien de commande.",
+    "Les 10 premières secondes décident du départ : annoncez le produit et l'offre immédiatement.",
+    "Une seule action à la fois : montrez, expliquez, prouvez, puis donnez le lien.",
+  ];
+  let index = 0;
+  let conseilIndex = 0;
+  const css = `<style>
+    .guide-cover{margin:0 0 28px;padding:30px 24px;border-radius:20px;color:#F3E9D2;background:
+      radial-gradient(circle at 12% 18%,rgba(52,211,153,.2),transparent 38%),
+      radial-gradient(circle at 88% 12%,rgba(231,184,75,.24),transparent 40%),
+      linear-gradient(145deg,#07101F,#0B1B33 55%,#0D2A27);border:1px solid rgba(231,184,75,.28)}
+    .guide-kicker{margin:0;color:#34D399;font-size:10px;letter-spacing:.24em;text-transform:uppercase;font-weight:800}
+    .guide-cover h1{font-family:Georgia,serif;font-size:34px;line-height:1.1;margin:14px 0 8px;color:#fff}
+    .guide-sous-titre{margin:0 0 14px;color:#A7B0C0;font-size:14px}
+    .guide-badges{display:flex;gap:7px;flex-wrap:wrap}
+    .guide-badges span{border:1px solid rgba(231,184,75,.35);background:rgba(231,184,75,.08);color:#F6D98A;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:700}
+    .guide-illu{display:block;margin:22px 0 2px;padding:0;border-radius:14px;overflow:hidden;background:#0B1B33;border:1px solid rgba(231,184,75,.2)}
+    .guide-illu svg{display:block;width:100%;height:auto}
+    .guide-conseil{margin:12px 0 20px;padding:13px 15px;border-left:3px solid #E7B84B;background:rgba(231,184,75,.08);border-radius:0 10px 10px 0;color:#D8C9AA;font-size:13px;line-height:1.6}
+    .guide-conseil strong{display:block;color:#E7B84B;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+    @media print{.guide-cover{background:#fff!important;color:#111!important}.guide-cover h1{color:#111}.guide-illu{page-break-inside:avoid}}
+  </style>`;
+  let resultat = html.replace("</head>", `${css}</head>`);
+  resultat = resultat.replace(/(<body[^>]*>)/i, `$1${couverture}`);
+  resultat = resultat.replace(/<h2(\s|>)/gi, (correspondance) => {
+    const tip = conseils[conseilIndex++ % conseils.length];
+    const bloc = `${illustrationGuide(index++)}<aside class="guide-conseil"><strong>Conseil Pro</strong>${echapper(tip)}</aside>`;
+    return `${bloc}${correspondance}`;
+  });
+  return resultat;
+}
+
+
 export async function genererGuidePourAbonnement(
   subscriptionId: string,
 ): Promise<StudioGuide | null> {
@@ -900,6 +950,7 @@ export async function genererGuidePourAbonnement(
       html = guideHtmlStatique(plan, abonnement, session);
     }
     html = assainirHtml(html);
+    html = habillerGuideEditorial(html, abonnement);
 
     const titre = (plan.titre ?? `Guide Live — ${abonnement.nom_activite}`).slice(0, 160);
     const markdown = planEnMarkdown(plan, abonnement);

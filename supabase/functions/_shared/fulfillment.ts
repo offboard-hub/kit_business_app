@@ -88,6 +88,7 @@ function resultatDepuisKit(commande: Commande, kit: Record<string, unknown>): Re
     String(kit.access_token ?? ""),
     String(kit.sheet_url ?? ""),
     commande.produit_type,
+    Array.isArray(kit.sheet_data) ? (kit.sheet_data as string[][]) : [],
   );
   return {
     commande,
@@ -180,6 +181,7 @@ export async function livrerCommande(
         livre_html: contenu.livreHtml,
         prompts_html: contenu.promptsTexte,
         sheet_url: contenu.sheetUrl,
+        sheet_data: contenu.sheetData,
         status: "COMPLETED",
       })
       .select("*")
@@ -194,6 +196,7 @@ export async function livrerCommande(
       String(kitCree.access_token),
       contenu.sheetUrl,
       commande.produit_type,
+      contenu.sheetData,
     );
 
     const htmlEmail = emailLivraisonHtml({

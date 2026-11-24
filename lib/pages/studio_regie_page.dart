@@ -61,6 +61,7 @@ class _StudioRegiePageState extends State<StudioRegiePage> {
     _minuteurAcces = Timer.periodic(const Duration(seconds: 45), (_) {
       final acces = _acces;
       if (!mounted || acces == null) return;
+      setState(() {});
       final essai = acces.essai;
       final essaiVientDExpirer = !acces.estPaye && essai != null && !essai.estActif;
       final abonnementVientDExpirer = !acces.estPaye && acces.abonnement != null &&
@@ -461,6 +462,7 @@ class _StudioRegiePageState extends State<StudioRegiePage> {
                               'Livre Guide',
                             ),
                             onTelecharger: _telechargerGuide,
+                            onRetour: () => setState(() => _onglet = 1),
                             onRafraichir: () async {
                               final guide = await ApiService.monGuide(_abonnement!.id);
                               if (!mounted) return;
@@ -550,7 +552,7 @@ class _BarreHaute extends StatelessWidget {
                 acces!.estPaye
                     ? '${acces!.abonnement!.joursRestants} j restants'
                     : acces!.estEssai
-                        ? '${acces!.essai!.joursRestants} j d\'essai'
+                        ? '${acces!.essai!.compteARebours} d\'essai'
                         : acces!.essaiExpire
                             ? 'Essai terminé'
                             : acces!.libelleAcces,
@@ -1765,6 +1767,7 @@ class _OngletGuide extends StatelessWidget {
     required this.onGenerer,
     required this.onCopier,
     required this.onTelecharger,
+    required this.onRetour,
     required this.onRafraichir,
   });
 
@@ -1774,6 +1777,7 @@ class _OngletGuide extends StatelessWidget {
   final VoidCallback onGenerer;
   final VoidCallback onCopier;
   final VoidCallback onTelecharger;
+  final VoidCallback onRetour;
   final Future<void> Function() onRafraichir;
 
   @override
@@ -1784,6 +1788,19 @@ class _OngletGuide extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: 330,
+              child: OrButton(
+                label: '← Retourner dans ma régie Studio Live',
+                icone: Icons.sensors_rounded,
+                plein: false,
+                onPressed: onRetour,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           Row(
             children: <Widget>[
               const Expanded(
@@ -1881,6 +1898,19 @@ class _OngletGuide extends StatelessWidget {
                 ),
               ],
             ),
+          const SizedBox(height: 18),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: 330,
+              child: OrButton(
+                label: '← Retourner dans ma régie Studio Live',
+                icone: Icons.sensors_rounded,
+                plein: false,
+                onPressed: onRetour,
+              ),
+            ),
+          ),
         ],
       ),
     );

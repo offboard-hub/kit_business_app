@@ -66,6 +66,11 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/welcome-email/index.ts"
 
+[functions.auth-signup]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/auth-signup/index.ts"
+
 [functions.site-assistant]
 enabled = true
 verify_jwt = false

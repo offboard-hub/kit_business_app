@@ -222,7 +222,7 @@ class ApiService {
       final utilisateur = _client.auth.currentUser;
       if (utilisateur == null) return null;
       final ligne = await _client
-          .from('studio_trials')
+          .from('live_subscriptions')
           .select()
           .eq('user_id', utilisateur.id)
           .maybeSingle();
@@ -445,6 +445,32 @@ class ApiService {
     }
   }
 
+  /// Crée un compte confirmé côté serveur (sans SMTP Supabase), puis le client
+  /// peut se connecter normalement. L'email d'accueil est envoyé via Resend.
+  static Future<void> creerCompte({
+    required String email,
+    required String motDePasse,
+    required String nom,
+  }) async {
+    try {
+      final reponse = await _client.functions.invoke(
+        'auth-signup',
+        body: <String, dynamic>{
+          'email': email,
+          'password': motDePasse,
+          'nom': nom,
+        },
+      );
+      final donnees = _map(reponse.data);
+      if (donnees['success'] != true) {
+        throw ApiException('${donnees['error'] ?? 'Création du compte impossible.'}');
+      }
+    } catch (erreur) {
+      if (erreur is ApiException) rethrow;
+      throw ApiException(_messageErreur(erreur));
+    }
+  }
+
   // --------------------------------------------------------------------------
   //  ASSISTANT IA (bulle de chat)
   // --------------------------------------------------------------------------
@@ -531,6 +557,24 @@ class ApiService {
       return (profil?['credits'] as num?)?.toInt() ?? 0;
     } catch (_) {
       return 0;
+    }
+  }
+
+  /// Compteur global des essais gratuits (RPC réservée aux administrateurs).
+  static Future<Map<String, int>> compterEssaisAdmin() async {
+    try {
+      final reponse = await _client.rpc('admin_compter_essais_gratuits');
+      final brut = reponse is List && reponse.isNotEmpty ? reponse.first : reponse;
+      final donnees = _map(brut);
+      int lire(String cle) => (donnees[cle] as num?)?.toInt() ?? 0;
+      return <String, int>{
+        'total': lire('total'),
+        'actifs': lire('actifs'),
+        'aujourdhui': lire('aujourdhui'),
+        'sept_derniers_jours': lire('sept_derniers_jours'),
+      };
+    } catch (_) {
+      return const <String, int>{};
     }
   }
 

@@ -92,11 +92,12 @@ serve(async (req) => {
         nom_projet: nomProjet,
         pays_code: pays.code,
         produit_type: typeProduit,
+        sheet_data: contenu.sheetData,
         status: "COMPLETED",
         error_message: null,
       })
       .eq("id", kitId)
-      .select("id, access_token, sheet_url")
+      .select("id, access_token, sheet_url, sheet_data")
       .single();
 
     if (erreurMaj || !kitMisAJour) {
@@ -108,6 +109,7 @@ serve(async (req) => {
       String(kitMisAJour.access_token),
       contenu.sheetUrl,
       typeProduit,
+      contenu.sheetData,
     );
 
     return json({

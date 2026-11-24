@@ -432,14 +432,18 @@ class _OrButtonState extends State<OrButton> {
           gradient: widget.plein
               ? (_survol && actif ? K.marque : K.orGradient)
               : null,
-          color: widget.plein ? null : K.surface.withValues(alpha: 0.5),
+          color: widget.plein
+              ? null
+              : (_survol && actif
+                  ? Colors.white.withValues(alpha: 0.035)
+                  : Colors.transparent),
           borderRadius: rayon,
           border: widget.plein
               ? null
               : Border.all(
                   color: _survol && actif
-                      ? K.or.withValues(alpha: 0.7)
-                      : K.borderLight,
+                      ? K.or.withValues(alpha: 0.62)
+                      : K.borderLight.withValues(alpha: 0.72),
                 ),
           boxShadow: widget.plein && actif
               ? <BoxShadow>[

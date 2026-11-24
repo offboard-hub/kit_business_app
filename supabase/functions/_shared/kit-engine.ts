@@ -23,6 +23,7 @@ export interface ContenuKit {
   livreHtml: string;
   promptsTexte: string;
   sheetUrl: string;
+  sheetData: string[][];
   strategie: Record<string, unknown>;
   avertissements: string[];
 }
@@ -209,6 +210,61 @@ async function creerGoogleSheet(titre: string, values: string[][]): Promise<stri
 }
 
 // ----------------------------------------------------------------------------
+//  TABLEAU DE GESTION — repli déterministe si l'IA ne renvoie pas de données
+// ----------------------------------------------------------------------------
+
+function sheetParDefaut(input: KitInput): string[][] {
+  const lignes: string[][] = [[
+    "Mois",
+    "Ventes (unités)",
+    "Prix de vente",
+    "Chiffre d'affaires",
+    "Coût unitaire",
+    "Marge unitaire",
+    "Marge totale",
+    "Stock restant",
+  ]];
+  const prix = Math.max(1000, Math.round((input.devise === "XOF" ? 9000 : 15) / 100) * 100);
+  const cout = Math.round(prix * 0.58);
+  const stockInitial = 120;
+  for (let mois = 1; mois <= 12; mois++) {
+    const ventes = 25 + ((mois * 7) % 23);
+    const stock = Math.max(0, stockInitial - ventes * mois);
+    lignes.push([
+      `Mois ${mois}`,
+      String(ventes),
+      String(prix),
+      String(ventes * prix),
+      String(cout),
+      String(prix - cout),
+      String(ventes * (prix - cout)),
+      String(stock),
+    ]);
+  }
+  lignes.push([
+    "TOTAL / SEUIL",
+    "",
+    "",
+    String(12 * 25 * prix),
+    "",
+    "",
+    String(12 * 25 * (prix - cout)),
+    "",
+  ]);
+  lignes.push([
+    "Seuil de rentabilité",
+    "Charges fixes / marge unitaire",
+    "",
+    String(Math.ceil(180000 / Math.max(1, prix - cout))),
+    "",
+    "",
+    "unités à vendre",
+    "",
+  ]);
+  return lignes;
+}
+
+// ----------------------------------------------------------------------------
 //  ORCHESTRATION
 // ----------------------------------------------------------------------------
 
@@ -268,10 +324,18 @@ export async function genererContenu(input: KitInput, typeProduit: TypeProduit):
       );
     }
   } else if (typeProduit === "sheet" || typeProduit === "pack") {
-    avertissements.push("Les données du Google Sheet n'ont pas pu être générées.");
+    sheetData = sheetParDefaut(input);
+    avertissements.push("Tableau de gestion généré en mode standard (IA indisponible).");
   }
 
-  return { livreHtml, promptsTexte, sheetUrl, strategie, avertissements };
+  return {
+    livreHtml,
+    promptsTexte,
+    sheetUrl,
+    sheetData: sheetData ?? [],
+    strategie,
+    avertissements,
+  };
 }
 
 /**
@@ -283,6 +347,7 @@ export function construireLiens(
   accessToken: string,
   sheetUrl: string,
   typeProduit: TypeProduit,
+  sheetData: string[][] = [],
 ): LiensKit {
   const base = Deno.env.get("SUPABASE_URL") ?? "";
   const url = (type: string) =>
@@ -290,7 +355,9 @@ export function construireLiens(
 
   const livre = typeProduit === "livre" || typeProduit === "pack" ? url("livre") : null;
   const prompts = typeProduit === "prompt" || typeProduit === "pack" ? url("prompt") : null;
-  const sheet = sheetUrl && sheetUrl.startsWith("http") ? sheetUrl : null;
+  const sheet = sheetData.length > 0
+    ? url("sheet")
+    : (sheetUrl && sheetUrl.startsWith("http") ? sheetUrl : null);
 
   return {
     livre,

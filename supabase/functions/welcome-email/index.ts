@@ -29,26 +29,31 @@ serve(async (req) => {
 
     const prenom = String(corps.prenom ?? "").trim().slice(0, 60);
     const source = String(corps.source ?? "site").trim().slice(0, 40);
+    const estEssai = source === "essai";
     const admin = adminClient();
 
-    // Anti-doublon : 1 email d'accueil par adresse et par 24 h.
+    // Anti-doublon : 1 email d'accueil par adresse et par 24 h, sauf pour
+    // l'activation d'essai qui doit être envoyée même après un email d'accueil.
     const { data: existant } = await admin
       .from("welcome_emails")
-      .select("email, envois, last_sent_at")
+      .select("email, envois, last_sent_at, source")
       .eq("email", email)
       .maybeSingle();
 
     if (existant?.last_sent_at) {
       const ecoule = Date.now() - new Date(String(existant.last_sent_at)).getTime();
-      if (ecoule < FENETRE_MS) {
+      const dejaEssai = String(existant.source ?? "") === "essai";
+      if (ecoule < FENETRE_MS && !(estEssai && !dejaEssai)) {
         return json({ success: true, sent: false, already_sent: true });
       }
     }
 
     const envoi = await envoyerEmail({
       to: email,
-      subject: "Bienvenue chez Kit Business — votre kit business en FCFA",
-      html: emailBienvenueHtml({ email, prenom }),
+      subject: estEssai
+        ? "Votre essai gratuit Studio Live est activé — e-booklive"
+        : "Bienvenue chez e-booklive — votre kit business en FCFA",
+      html: emailBienvenueHtml({ email, prenom, essai: estEssai }),
     });
 
     if (!envoi.ok) {

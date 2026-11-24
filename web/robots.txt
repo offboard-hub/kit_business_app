@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Pages privées / transactionnelles
+Disallow: /admin-videos
+Disallow: /mon-espace
+Disallow: /studio/regie
+Disallow: /kit.html
+Disallow: /live/
+Disallow: /paiement-en-attente
+Disallow: /confirmation
+
+Sitemap: https://e-booklive.offboard-hub.com/sitemap.xml

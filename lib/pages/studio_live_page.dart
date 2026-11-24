@@ -12,6 +12,7 @@ import '../core/theme.dart';
 import '../services/api.dart';
 import '../services/checkout_ouverture.dart';
 import '../widgets/app_header.dart';
+import '../widgets/auth_essai_dialog.dart';
 import '../widgets/country_picker.dart';
 import '../widgets/logo_ebooklive.dart';
 import '../widgets/site_assistant_chat.dart';
@@ -45,6 +46,7 @@ class _StudioLivePageState extends State<StudioLivePage> {
       _minuteurAcces = Timer.periodic(const Duration(seconds: 60), (_) {
         final acces = _acces;
         if (!mounted || acces == null) return;
+        setState(() {});
         final essaiExpire = acces.essai != null && !acces.essai!.estActif;
         final abonnementExpire = acces.abonnement != null && !acces.estPaye;
         if (essaiExpire || abonnementExpire) _chargerAcces();
@@ -68,8 +70,11 @@ class _StudioLivePageState extends State<StudioLivePage> {
     if (_essaiEnCours) return;
     final utilisateur = Supabase.instance.client.auth.currentUser;
     if (utilisateur == null) {
-      _toast('Créez un compte ou connectez-vous pour démarrer votre essai gratuit.');
-      Navigator.pushNamed(context, '/mon-espace');
+      final demarre = await demarrerEssaiAvecCompte(context);
+      if (!demarre || !mounted) return;
+      await _chargerAcces();
+      if (!mounted) return;
+      Navigator.pushNamed(context, '/studio/regie');
       return;
     }
     if (utilisateur.emailConfirmedAt == null) {
@@ -83,6 +88,11 @@ class _StudioLivePageState extends State<StudioLivePage> {
     setState(() => _essaiEnCours = true);
     try {
       await ApiService.demarrerEssai();
+      await ApiService.envoyerEmailAccueil(
+        utilisateur.email ?? '',
+        prenom: '${utilisateur.userMetadata?['full_name'] ?? ''}',
+        source: 'essai',
+      );
       await _chargerAcces();
       if (!mounted) return;
       setState(() => _essaiEnCours = false);
@@ -282,7 +292,7 @@ class _TexteHero extends StatelessWidget {
                 const Puce(texte: '10 USD / 30 jours', icone: Icons.sell_rounded),
                 if (essaiActif)
                   Puce(
-                    texte: 'Essai · ${acces!.essai!.joursRestants} j restants',
+                    texte: 'Essai · ${acces!.essai!.compteARebours}',
                     icone: Icons.timer_rounded,
                     couleur: K.or,
                   )
@@ -391,7 +401,7 @@ class _TexteHero extends StatelessWidget {
                   SizedBox(
                     width: 250,
                     child: OrButton(
-                      label: 'Continuer mon essai · ${acces!.essai!.joursRestants} j',
+                      label: 'Continuer mon essai · ${acces!.essai!.compteARebours}',
                       icone: Icons.sensors_rounded,
                       onPressed: onRegie,
                     ),
@@ -493,7 +503,7 @@ class _BandeauEssai extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Essai gratuit actif · ${essai.joursRestants} jours restants · 20 messages IA/jour · Livre Guide après paiement',
+              'Essai gratuit actif · ${essai.compteARebours} restants · 20 messages IA/jour · Livre Guide après paiement',
               style: const TextStyle(color: K.text, fontSize: 11.5, fontWeight: FontWeight.w700),
             ),
           ),

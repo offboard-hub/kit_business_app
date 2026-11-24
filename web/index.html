@@ -44,6 +44,52 @@
   }
   </script>
 
+  <script>
+    /* Canonical / OG par route publique : Flutter sert le même index.html
+       pour /boutique, /studio-live et /guide. Sans ceci, Google verrait la
+       même canonical racine pour toutes les pages du sitemap. */
+    (function () {
+      var base = 'https://e-booklive.offboard-hub.com';
+      var path = window.location.pathname.replace(/\/+$/, '') || '/';
+      var pages = {
+        '/': {
+          title: 'e-booklive — La Boutique & Studio Live',
+          description: 'Des kits business sur mesure pour votre métier et un studio live complet pour vendre en direct. Prix dans votre devise, SasPay ou Paddle.'
+        },
+        '/boutique': {
+          title: 'La Boutique — kits business sur mesure | e-booklive',
+          description: 'Choisissez votre secteur et votre kit : prompts IA, tableau de gestion et livre stratégique adaptés à votre métier et à votre pays.'
+        },
+        '/studio-live': {
+          title: 'Studio Live — régie live et chat IA | e-booklive',
+          description: 'Régie live professionnelle, co-animateur, chat IA commercial et Livre Guide. Essai gratuit 3 jours, puis 10 USD / 30 jours.'
+        },
+        '/guide': {
+          title: 'Guide & Tutoriel — commander, animer, vendre | e-booklive',
+          description: 'Le guide pas à pas pour choisir votre kit, ouvrir votre Studio Live et vendre en direct.'
+        }
+      };
+      var page = pages[path];
+      if (!page) return;
+
+      var canonical = document.querySelector('link[rel="canonical"]');
+      if (canonical) canonical.setAttribute('href', base + (path === '/' ? '/' : path));
+      var ogUrl = document.querySelector('meta[property="og:url"]');
+      if (ogUrl) ogUrl.setAttribute('content', base + (path === '/' ? '/' : path));
+      document.title = page.title;
+
+      function setMeta(selector, value) {
+        var element = document.querySelector(selector);
+        if (element) element.setAttribute('content', value);
+      }
+      setMeta('meta[name="description"]', page.description);
+      setMeta('meta[property="og:title"]', page.title);
+      setMeta('meta[property="og:description"]', page.description);
+      setMeta('meta[name="twitter:title"]', page.title);
+      setMeta('meta[name="twitter:description"]', page.description);
+    })();
+  </script>
+
   <style>
     :root {
       --bg: #090D16;

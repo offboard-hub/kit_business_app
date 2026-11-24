@@ -37,19 +37,36 @@ void main() {
   });
 
   testWidgets('la page d\'accueil présente les deux univers', (tester) async {
-    tester.view.physicalSize = const Size(1280, 2600);
+    tester.view.physicalSize = const Size(1280, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const MaterialApp(home: HomePage()));
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(tester.takeException(), isNull);
     expect(find.text('La Boutique'), findsWidgets);
     expect(find.text('Studio Live'), findsWidgets);
     expect(find.text('Guide & Tutoriel'), findsWidgets);
+    expect(find.text('Caméra Produits'), findsOneWidget);
+    expect(find.text('Partage d\'Écran'), findsOneWidget);
     expect(find.text('Explorer La Boutique'), findsWidgets);
+    expect(find.text('Découvrir le Studio Live'), findsWidgets);
+  });
+
+  testWidgets('l\'accueil tient sur un écran mobile', (tester) async {
+    tester.view.physicalSize = const Size(390, 3200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Explorer La Boutique'), findsWidgets);
+    expect(find.text('Caméra Produits'), findsOneWidget);
   });
 
   testWidgets('Studio Live propose l\'essai gratuit et l\'abonnement', (tester) async {

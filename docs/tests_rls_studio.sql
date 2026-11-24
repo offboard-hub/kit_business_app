@@ -127,21 +127,21 @@ select table_name, grantee,
 from information_schema.role_table_grants
 where table_schema = 'public'
   and table_name in ('studio_subscriptions','studio_guides',
-                     'studio_live_sessions','studio_live_messages','studio_trials')
+                     'studio_live_sessions','studio_live_messages','studio_trials','live_subscriptions')
 group by table_name, grantee
 order by table_name, grantee;
 
 -- T0.2 Policies en place
 select tablename, policyname, roles, cmd, qual, with_check
 from pg_policies
-where schemaname = 'public' and tablename like 'studio_%'
+where schemaname = 'public' and (tablename like 'studio_%' or tablename = 'live_subscriptions')
 order by tablename, policyname;
 
--- T0.3 RLS activée sur les 5 tables
+-- T0.3 RLS activée sur les 6 tables
 select relname, relrowsecurity as rls_activee
 from pg_class
 where relname in ('studio_subscriptions','studio_guides',
-                  'studio_live_sessions','studio_live_messages','studio_trials')
+                  'studio_live_sessions','studio_live_messages','studio_trials','live_subscriptions')
 order by relname;
 
 -- T0.4 Realtime (F17) : studio_live_messages doit être membre de la publication
@@ -157,6 +157,7 @@ where conrelid = any (array[
         'public.studio_live_sessions'::regclass,
         'public.studio_live_messages'::regclass,
         'public.studio_trials'::regclass,
+        'public.live_subscriptions'::regclass,
         'public.orders'::regclass
       ])
 order by 1, 2;
@@ -165,7 +166,7 @@ order by 1, 2;
 select tablename, indexname, indexdef
 from pg_indexes
 where schemaname = 'public'
-  and (tablename like 'studio_%' or tablename = 'orders')
+  and (tablename like 'studio_%' or tablename in ('orders', 'live_subscriptions'))
 order by tablename, indexname;
 
 -- ----------------------------------------------------------------------------
@@ -497,7 +498,7 @@ select 'T6.9 apres cascade (guide)' as test, count(*) as attendu_0
 -- 7.0 Fixtures : emails confirmés, aucun essai résiduel
 update auth.users set email_confirmed_at = coalesce(email_confirmed_at, now())
  where email in ('a@test.local', 'b@test.local');
-delete from public.studio_trials
+delete from public.live_subscriptions
  where user_id in (current_setting('test.user_a')::uuid,
                    current_setting('test.user_b')::uuid);
 
@@ -511,8 +512,8 @@ set local role authenticated;
 select 'T7.1 essai A cree' as test, count(*) as attendu_1
   from public.demarrer_essai_studio();
 select 'T7.2 duree exacte 3 jours' as test,
-       (ends_at - started_at) = interval '3 days' as attendu_true
-  from public.studio_trials
+       (trial_ends_at - trial_started_at) = interval '3 days' as attendu_true
+  from public.live_subscriptions
  where user_id = current_setting('test.user_a')::uuid;
 select 'T7.3 acces_studio pendant essai' as test,
        public.acces_studio() as attendu_true;
@@ -537,7 +538,7 @@ select set_config('request.jwt.claims',
                     'role', 'authenticated')::text, true);
 set local role authenticated;
 select 'T7.5 essai de A invisible pour B' as test, count(*) as attendu_0
-  from public.studio_trials;
+  from public.live_subscriptions;
 rollback;
 
 -- 7.4 Aucune écriture client (même sur sa propre ligne)
@@ -549,8 +550,8 @@ select set_config('request.jwt.claims',
 set local role authenticated;
 do $$
 begin
-  insert into public.studio_trials (user_id, started_at, ends_at)
-  values (current_setting('test.user_a')::uuid, now(), now() + interval '3 days');
+  insert into public.live_subscriptions (user_id, is_trial, trial_started_at, trial_ends_at)
+  values (current_setting('test.user_a')::uuid, true, now(), now() + interval '3 days');
   raise exception 'T7.6 ÉCHEC : insertion client acceptée';
 exception
   when insufficient_privilege then
@@ -558,7 +559,7 @@ exception
 end $$;
 do $$
 begin
-  update public.studio_trials set ends_at = now() + interval '4 days';
+  update public.live_subscriptions set trial_ends_at = now() + interval '4 days';
   raise exception 'T7.7 ÉCHEC : prolongation client acceptée';
 exception
   when insufficient_privilege then
@@ -569,8 +570,8 @@ rollback;
 -- 7.5 Prolongation refusée même en service_role (contrainte CHECK)
 do $$
 begin
-  update public.studio_trials
-     set ends_at = ends_at + interval '1 day'
+  update public.live_subscriptions
+     set trial_ends_at = trial_ends_at + interval '1 day'
    where user_id = current_setting('test.user_a')::uuid;
   raise exception 'T7.8 ÉCHEC : prolongation acceptée par la contrainte';
 exception
@@ -628,9 +629,9 @@ select 'T7.12 chat/salle essai publique active' as test,
 rollback;
 
 -- 7.8 Expiration : accès fermé, salle plus publique
-update public.studio_trials
-   set started_at = now() - interval '4 days',
-       ends_at = now() - interval '1 day'
+update public.live_subscriptions
+   set trial_started_at = now() - interval '4 days',
+       trial_ends_at = now() - interval '1 day'
  where user_id = current_setting('test.user_a')::uuid;
 
 begin;
@@ -655,13 +656,29 @@ rollback;
 -- ----------------------------------------------------------------------------
 -- T8. NETTOYAGE
 -- ----------------------------------------------------------------------------
-delete from public.studio_trials
+delete from public.live_subscriptions
  where user_id in (current_setting('test.user_a')::uuid,
                    current_setting('test.user_b')::uuid);
 delete from public.studio_live_sessions where room_id = 'zzrlstrial';
 delete from public.studio_subscriptions where nom_activite like 'zztestrls%';
 select 'T8.1 nettoyage' as test, count(*) as attendu_0
   from public.studio_subscriptions where nom_activite like 'zztestrls%';
+
+-- ----------------------------------------------------------------------------
+-- T9. COMPTEUR ADMINISTRATEUR DES ESSAIS
+-- ----------------------------------------------------------------------------
+begin;
+update public.profiles set is_admin = true
+ where id = current_setting('test.user_a')::uuid;
+select set_config('request.jwt.claims',
+  json_build_object('sub', current_setting('test.user_a'),
+                    'role', 'authenticated')::text, true);
+set local role authenticated;
+select 'T9.1 compteur essais admin' as test,
+       total >= 0 as total_ok,
+       actifs >= 0 as actifs_ok
+  from public.admin_compter_essais_gratuits();
+rollback;
 
 -- ============================================================================
 --  LECTURE DES RÉSULTATS  (état au 2026-11-23, correctifs appliqués)
