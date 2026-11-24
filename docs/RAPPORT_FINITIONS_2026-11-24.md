@@ -14,8 +14,12 @@
 ## 2. Essai gratuit Studio Live
 
 - Modale d'inscription/connexion avant l'essai (`lib/widgets/auth_essai_dialog.dart`).
-- Création de compte **côté serveur confirmée** via `auth-signup`, sans dépendre
-  du SMTP Supabase (qui renvoyait 500 « Error sending confirmation email »).
+- **Inscription native Supabase Auth** : le compte est créé par `signUp`, l'email
+  de confirmation part via le **SMTP Supabase** configuré (Resend). L'utilisateur
+  doit confirmer son email avant de pouvoir démarrer l'essai.
+- L'ancien contournement `auth-signup` n'est plus utilisé par l'application.
+  La fonction reste temporairement déployée pour l'ancien build Netlify, puis
+  pourra être supprimée après le déploiement du flux natif.
 - Démarrage de l'essai via RPC `demarrer_essai_studio()` : un seul essai,
   3 jours exacts, email confirmé, aucune prolongation.
 - Nouvelle source de vérité : `public.live_subscriptions`
@@ -26,12 +30,29 @@
   régie (`EssaiStudio.compteARebours`).
 - Compteur admin : `admin_compter_essais_gratuits()` + carte dans
   `/admin-videos`.
-- Email Resend : `welcome-email` envoie le message d'activation d'essai et
-  journalise dans `welcome_emails`.
+- Email Resend : `welcome-email` envoie le message d'accueil / d'activation
+  d'essai et journalise dans `welcome_emails`.
+
+> ⚠️ **SMTP Supabase** : les logs Auth ont montré
+> `dial tcp: lookup stmp.resend.com ... no such host`. Le host configuré contient
+> une faute (`stmp` au lieu de `smtp`). Corriger dans
+> **Supabase → Authentication → Emails → SMTP Settings** :
+> `smtp.resend.com`, port `465`, user `resend`, mot de passe = clé API Resend,
+> expéditeur vérifié. Tant que cette faute est présente, `signUp` renvoie 500
+> « Error sending confirmation email ».
 
 ### Résultats réels
 
-- `auth-signup` HTTP **200**, utilisateur confirmé.
+- `auth-signup` HTTP **200** (ancien contournement, conservé uniquement pour
+  l'ancien build en ligne).
+- **SMTP Supabase corrigé** : hôte `smtp.resend.com`.
+- Test `signUp` natif : **HTTP 200**, `session: null` → email de confirmation
+  envoyé (test avec `delivered@resend.dev`).
+- Les adresses de test `@example.com` sont refusées par Resend
+  (`550 Invalid to field`) : utilisez une vraie adresse pour tester.
+- Une fois le host corrigé, le flux est : `signUp` → email de confirmation
+  Supabase/SMTP → clic → `signInWithPassword` → essai.
+- Les tests de trial ci-dessous ont été validés avec un compte confirmé :
 - Premier `demarrer_essai_studio` HTTP **200** ; deuxième HTTP **400 P0001**
   (« déjà utilisé »).
 - `live_subscriptions` : durée mesurée **3 days**.
@@ -72,7 +93,7 @@
 ## 4. Supabase / déploiement
 
 - Migration appliquée : `20260101000700_essais_gratuits_et_rendu_livres.sql`.
-- 17 Edge Functions déployées, dont `auth-signup`, `view-kit`, `welcome-email`,
+- **17 Edge Functions** déployées (dont `auth-signup`, conservé temporairement pour l'ancien build) : `view-kit`, `welcome-email`,
   `generate-kit`, `generate-live-guide`, `live-auto-chat`, `studio-room`,
   `paddle-webhook`, `saspay-webhook`, `verify-payment`.
 - `RESEND_FROM_EMAIL` corrigé : le secret contenait `e-nooklive` (faute de

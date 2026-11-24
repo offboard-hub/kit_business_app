@@ -52,15 +52,36 @@ class _AuthPageState extends State<AuthPage> {
       try {
         await auth.signInWithPassword(email: email, password: motDePasse);
       } on AuthException catch (erreur) {
-        if (!erreur.message.toLowerCase().contains('invalid login credentials')) rethrow;
+        final message = erreur.message.toLowerCase();
+        if (message.contains('email not confirmed')) {
+          if (!mounted) return;
+          setState(() => _chargement = false);
+          _toast(
+            'Confirmez votre adresse email via le lien reçu, puis reconnectez-vous.',
+            K.gold,
+          );
+          return;
+        }
+        if (!message.contains('invalid login credentials')) rethrow;
 
-        // Compte créé côté serveur (confirmé), sans dépendre du SMTP Supabase.
-        await ApiService.creerCompte(
+        // Inscription native Supabase : l'email de confirmation part via le
+        // SMTP configuré (Resend). Aucun compte n'est auto-confirmé.
+        final inscription = await auth.signUp(
           email: email,
-          motDePasse: motDePasse,
-          nom: email.split('@').first,
+          password: motDePasse,
+          data: <String, dynamic>{'full_name': email.split('@').first},
+          emailRedirectTo: AppConfig.siteUrl,
         );
-        await auth.signInWithPassword(email: email, password: motDePasse);
+        if (inscription.session == null) {
+          if (!mounted) return;
+          setState(() => _chargement = false);
+          _toast(
+            'Compte créé. Un email de confirmation vient de vous être envoyé. '
+            'Cliquez sur le lien, puis reconnectez-vous.',
+            K.emeraude,
+          );
+          return;
+        }
       }
 
       // Email d'accueil informatif, sans lien de confirmation.

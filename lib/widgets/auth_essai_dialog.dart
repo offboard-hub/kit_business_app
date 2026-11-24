@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/config.dart';
 import '../core/theme.dart';
 import '../services/api.dart';
 
@@ -67,13 +68,26 @@ class _AuthEssaiDialogState extends State<_AuthEssaiDialog> {
 
     try {
       if (_inscription) {
-        await ApiService.creerCompte(
+        // Inscription native Supabase : confirmation par email via le SMTP
+        // Resend configuré dans Supabase Auth.
+        final inscription = await auth.signUp(
           email: email,
-          motDePasse: motDePasse,
-          nom: nom,
+          password: motDePasse,
+          data: <String, dynamic>{'full_name': nom},
+          emailRedirectTo: AppConfig.siteUrl,
         );
+        if (inscription.session == null) {
+          if (!mounted) return;
+          setState(() {
+            _chargement = false;
+            _erreur =
+                'Compte créé. Un email de confirmation vient de vous être envoyé à $email. '
+                'Cliquez sur le lien, puis revenez ici et choisissez « J\'ai déjà un compte » '
+                'pour activer votre essai de 3 jours.';
+          });
+          return;
+        }
         compteCree = true;
-        await auth.signInWithPassword(email: email, password: motDePasse);
       } else {
         await auth.signInWithPassword(email: email, password: motDePasse);
       }

@@ -445,32 +445,6 @@ class ApiService {
     }
   }
 
-  /// Crée un compte confirmé côté serveur (sans SMTP Supabase), puis le client
-  /// peut se connecter normalement. L'email d'accueil est envoyé via Resend.
-  static Future<void> creerCompte({
-    required String email,
-    required String motDePasse,
-    required String nom,
-  }) async {
-    try {
-      final reponse = await _client.functions.invoke(
-        'auth-signup',
-        body: <String, dynamic>{
-          'email': email,
-          'password': motDePasse,
-          'nom': nom,
-        },
-      );
-      final donnees = _map(reponse.data);
-      if (donnees['success'] != true) {
-        throw ApiException('${donnees['error'] ?? 'Création du compte impossible.'}');
-      }
-    } catch (erreur) {
-      if (erreur is ApiException) rethrow;
-      throw ApiException(_messageErreur(erreur));
-    }
-  }
-
   // --------------------------------------------------------------------------
   //  ASSISTANT IA (bulle de chat)
   // --------------------------------------------------------------------------
