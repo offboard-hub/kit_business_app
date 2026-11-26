@@ -74,6 +74,8 @@ L'abonnement Studio Live est fixé à 10 USD pour 30 jours, converti dans la dev
 
 Le paiement est exigible immédiatement. Selon le pays, il s'effectue via SasPay (mobile money ou carte) ou via Paddle (carte bancaire et moyens internationaux). Aucune donnée bancaire ne transite par nos serveurs.
 
+Pour les transactions traitées par Paddle, Paddle agit comme revendeur officiel (« Merchant of Record ») et ses conditions de paiement s'appliquent à la transaction.
+
 4. Droit de rétractation et remboursement
 S'agissant de contenus numériques fournis immédiatement, le client renonce à son droit de rétractation dès la génération du kit ou l'activation de l'abonnement. En cas d'échec technique empêchant la livraison, le paiement est remboursé ou une nouvelle génération est proposée sans frais.
 
@@ -110,7 +112,7 @@ Hébergement
 Le site est hébergé par Netlify (www.netlify.com). Les fonctions serveur, la base de données et l'authentification sont hébergées par Supabase. Les salles vidéo du Studio Live reposent sur Jitsi Meet (meet.jit.si).
 
 Paiements
-Les paiements sont traités par SasPay (23 pays, devise locale) et Paddle (reste du monde, TVA gérée). Aucune donnée de carte bancaire n'est stockée sur nos serveurs.
+Les paiements sont traités par SasPay (23 pays, devise locale) et Paddle (reste du monde, TVA gérée). Paddle agit comme revendeur officiel (« Merchant of Record ») pour les transactions qu'il traite. Aucune donnée de carte bancaire n'est stockée sur nos serveurs.
 
 Intelligence artificielle
 Les contenus des kits, les réponses du chat live et le Livre Guide sont générés par des modèles d'intelligence artificielle (DeepSeek et Gemini). Le client doit vérifier les informations avant utilisation, notamment les prix et mentions réglementaires de son secteur.
