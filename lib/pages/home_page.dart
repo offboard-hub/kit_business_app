@@ -1946,6 +1946,15 @@ class _PiedDePage extends StatelessWidget {
             _LienPied(label: 'Studio Live', onTap: () => Navigator.pushNamed(context, '/studio-live')),
             _LienPied(label: 'Guide & Tutoriel', onTap: () => Navigator.pushNamed(context, '/guide')),
             _LienPied(label: 'CGV', onTap: () => Navigator.pushNamed(context, '/cgv')),
+            _LienPied(
+              label: 'Confidentialité',
+              onTap: () => Navigator.pushNamed(context, '/confidentialite'),
+            ),
+            _LienPied(
+              label: 'Remboursement',
+              onTap: () => Navigator.pushNamed(context, '/remboursement'),
+            ),
+            _LienPied(label: 'Contact', onTap: () => Navigator.pushNamed(context, '/contact')),
             _LienPied(label: 'Mentions légales', onTap: () => Navigator.pushNamed(context, '/mentions-legales')),
             _LienPied(label: 'FAQ', onTap: () => Navigator.pushNamed(context, '/faq')),
             _LienPied(

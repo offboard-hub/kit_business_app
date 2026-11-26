@@ -344,10 +344,26 @@ class _EbookliveAppState extends State<EbookliveApp> {
           break;
 
         case '/cgv':
+        case '/terms':
           page = const CGVPage();
           break;
 
+        case '/confidentialite':
+        case '/privacy':
+          page = const ConfidentialitePage();
+          break;
+
+        case '/remboursement':
+        case '/refund':
+          page = const RemboursementPage();
+          break;
+
+        case '/contact':
+          page = const ContactPage();
+          break;
+
         case '/mentions-legales':
+        case '/legal':
           page = const MentionsLegalesPage();
           break;
 

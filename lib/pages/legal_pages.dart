@@ -68,14 +68,16 @@ e-booklive propose deux univers distincts :
 3. Prix et moyens de paiement
 Les kits sont affichés à partir de 3 000 FCFA (tarif de référence XOF). Le prix est automatiquement converti dans la devise du pays sélectionné :
 • dans les 23 pays couverts par SasPay, le débit est effectué dans la devise locale (XOF, XAF, CDF, GNF, NGN, GHS, SLE, KES, UGX, TZS, RWF, MWK, MZN, ZMW, INR) ;
-• dans les autres pays, Paddle facture en EUR ou USD, la conversion locale étant affichée à titre indicatif, avec TVA gérée par Paddle lorsque applicable.
+• dans les autres pays, Paddle facture en USD, la conversion locale étant affichée à titre indicatif, avec TVA gérée par Paddle lorsque applicable.
 
 L'abonnement Studio Live est fixé à 10 USD pour 30 jours, converti dans la devise de facturation du pays sélectionné. Il n'est pas renouvelé automatiquement : le client choisit librement de se réabonner à l'expiration.
 
 Le paiement est exigible immédiatement. Selon le pays, il s'effectue via SasPay (mobile money ou carte) ou via Paddle (carte bancaire et moyens internationaux). Aucune donnée bancaire ne transite par nos serveurs.
 
-4. Droit de rétractation
+4. Droit de rétractation et remboursement
 S'agissant de contenus numériques fournis immédiatement, le client renonce à son droit de rétractation dès la génération du kit ou l'activation de l'abonnement. En cas d'échec technique empêchant la livraison, le paiement est remboursé ou une nouvelle génération est proposée sans frais.
+
+La politique de remboursement détaillée est disponible sur ${AppConfig.siteUrl}/remboursement. Pour toute demande : ${AppConfig.emailSupport}.
 
 5. Livraison
 La livraison est considérée effectuée dès l'envoi des liens par email (Resend) ; ils restent également accessibles sur la page de confirmation. Pour le Studio Live, l'accès à la régie est activé dès confirmation du paiement et le Livre Guide est envoyé par email.
@@ -129,6 +131,142 @@ Fatima Touré
 
 Contact
 WhatsApp : ${AppConfig.lienWhatsAppAide}
+''',
+    );
+  }
+}
+
+class ConfidentialitePage extends StatelessWidget {
+  const ConfidentialitePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PageTexteLegal(
+      titre: 'Politique de confidentialité',
+      contenu: '''
+Dernière mise à jour : 26 novembre 2026
+
+1. Responsable du traitement
+e-booklive est édité par Offboard-Hub. Pour toute question relative à vos données :
+${AppConfig.emailSupport}
+
+2. Données collectées
+Nous collectons uniquement les données nécessaires au service :
+• compte : nom, adresse email, mot de passe chiffré par Supabase Auth ;
+• commande : pays, devise, métier, nom du projet, numéro WhatsApp, précisions et fiche produit ;
+• Studio Live : nom d'activité, messages du chat, contenus du guide et statut de l'abonnement ;
+• paiement : identifiant de transaction, montant, devise et statut. Aucune donnée de carte bancaire n'est stockée par e-booklive ;
+• technique : journaux de connexion et adresse IP pour la sécurité et la prévention de la fraude.
+
+3. Finalités et bases légales
+• exécution du contrat : créer le compte, générer et livrer le kit, activer le Studio Live ;
+• intérêt légitime : sécurité, prévention de la fraude, amélioration du service ;
+• obligation légale : conservation des justificatifs de paiement ;
+• consentement : communications facultatives.
+
+4. Destinataires et sous-traitants
+Les données sont traitées par :
+• Supabase (authentification, base de données, fonctions serveur) ;
+• Netlify (hébergement du site) ;
+• Resend (emails transactionnels) ;
+• Paddle et SasPay (paiements) ;
+• Jitsi Meet (salles vidéo du Studio Live) ;
+• DeepSeek et Gemini (génération de contenus et réponses du chat IA).
+Ces prestataires n'utilisent vos données que pour fournir leurs services.
+
+5. Durées de conservation
+• compte : jusqu'à sa suppression, puis 30 jours de sauvegarde ;
+• kits et commandes : durée nécessaire à la garantie et aux obligations comptables ;
+• messages du chat live : purge automatique après 30 jours ;
+• justificatifs de paiement : durée légale applicable ;
+• journaux techniques : durée limitée de sécurité.
+
+6. Vos droits
+Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité. Écrivez à ${AppConfig.emailSupport}. Vous pouvez également saisir l'autorité de protection des données compétente.
+
+7. Cookies et stockage local
+Le site utilise uniquement des cookies et stockages techniques nécessaires (session, pays choisi, sécurité). Aucun cookie publicitaire n'est déposé par e-booklive. Les prestataires de paiement et de visioconférence peuvent déposer leurs propres cookies lors de leur utilisation.
+
+8. Transferts internationaux
+Certains prestataires peuvent traiter des données hors de votre pays. Ces transferts sont encadrés par les garanties contractuelles appropriées de ces prestataires.
+
+9. Sécurité
+Les accès sont protégés par authentification, les mots de passe sont chiffrés, les paiements sont traités par des prestataires certifiés et les secrets serveur ne sont jamais exposés au navigateur.
+
+10. Contact
+Email : ${AppConfig.emailSupport}
+WhatsApp : ${AppConfig.lienWhatsAppAide}
+''',
+    );
+  }
+}
+
+class RemboursementPage extends StatelessWidget {
+  const RemboursementPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PageTexteLegal(
+      titre: 'Politique de remboursement',
+      contenu: '''
+Dernière mise à jour : 26 novembre 2026
+
+1. Produits numériques
+Les kits (Livre stratégique, Prompts IA, Sheet automatisé, Pack complet) sont des contenus numériques générés à la demande et livrés immédiatement après le paiement. Conformément aux règles applicables aux contenus numériques fournis immédiatement, le client renonce à son droit de rétractation une fois le kit généré et les liens de livraison mis à disposition.
+
+2. Cas de remboursement
+Un remboursement peut être accordé si :
+• le paiement a été débité mais le kit n'a pas été livré ;
+• le contenu livré est corrompu ou techniquement inutilisable et ne peut pas être régénéré ;
+• un doublon ou un débit non autorisé est constaté ;
+• la loi applicable impose un remboursement.
+Les demandes de changement d'avis après livraison ne sont pas remboursables, sauf geste commercial exceptionnel.
+
+3. Studio Live
+L'abonnement Studio Live donne accès à 30 jours de service et n'est pas renouvelé automatiquement. Une demande de remboursement peut être étudiée si l'accès n'a jamais été activé ou en cas de défaillance technique empêchant l'utilisation. Après activation et utilisation de la régie, les sommes correspondant au service consommé ne sont pas remboursables, sous réserve des droits légaux.
+
+4. Procédure
+Écrivez à ${AppConfig.emailSupport} ou sur WhatsApp (${AppConfig.lienWhatsAppAide}) avec :
+• l'email utilisé lors de l'achat ;
+• la référence de commande ou l'identifiant de transaction ;
+• le motif de la demande et, si possible, une capture du problème.
+Nous accusons réception sous 2 jours ouvrés et répondons sous 14 jours. Un remboursement accepté est effectué sur le moyen de paiement d'origine, généralement sous 5 à 10 jours ouvrés selon le prestataire.
+
+5. Paiements Paddle et SasPay
+Les remboursements sont traités via le prestataire ayant encaissé le paiement (Paddle ou SasPay). Les délais bancaires peuvent s'ajouter à notre délai de traitement.
+
+6. Contact
+Email : ${AppConfig.emailSupport}
+WhatsApp : ${AppConfig.lienWhatsAppAide}
+''',
+    );
+  }
+}
+
+class ContactPage extends StatelessWidget {
+  const ContactPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PageTexteLegal(
+      titre: 'Contact & assistance',
+      contenu: '''
+e-booklive — Offboard-Hub
+
+Une question sur un kit, un paiement, le Studio Live ou vos données ?
+Notre équipe répond du lundi au vendredi, de 9 h à 18 h (GMT+1).
+
+Email : ${AppConfig.emailSupport}
+WhatsApp : ${AppConfig.lienWhatsAppAide}
+
+Pour une demande de remboursement, indiquez l'email d'achat et la référence de commande.
+Pour une question sur vos données personnelles, écrivez à ${AppConfig.emailSupport} avec l'objet « Données personnelles ».
+
+Liens utiles :
+• Conditions générales de vente : ${AppConfig.siteUrl}/cgv
+• Politique de confidentialité : ${AppConfig.siteUrl}/confidentialite
+• Politique de remboursement : ${AppConfig.siteUrl}/remboursement
+• Mentions légales : ${AppConfig.siteUrl}/mentions-legales
 ''',
     );
   }
