@@ -14,10 +14,12 @@
   <title>e-booklive — La Boutique &amp; Studio Live</title>
   <meta name="description" content="e-booklive : des kits business sur mesure pour votre métier et un studio live complet pour vendre en direct. Prix dans votre devise, paiement SasPay ou Paddle, livraison immédiate.">
   <meta name="keywords" content="e-booklive, kit business, studio live, live shopping, prompts IA, livre stratégique, SasPay, Paddle, Afrique, Maroc, CFA, formation, e-commerce">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="https://e-booklive.offboard-hub.com/">
 
   <meta property="og:site_name" content="e-booklive">
+  <meta property="og:locale" content="fr_FR">
+  <meta name="author" content="e-booklive">
   <meta property="og:title" content="e-booklive — La Boutique &amp; Studio Live">
   <meta property="og:description" content="Des kits business écrits pour votre métier et une régie live pro : chat IA, co-animateur, Livre Guide offert. 10 $ / 30 jours.">
   <meta property="og:type" content="website">
@@ -31,6 +33,17 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link rel="manifest" href="manifest.json">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "e-booklive",
+    "url": "https://e-booklive.offboard-hub.com",
+    "inLanguage": "fr-FR",
+    "description": "Kits business sur mesure et Studio Live pour les entrepreneurs d'Afrique francophone."
+  }
+  </script>
 
   <script type="application/ld+json">
   {
@@ -264,6 +277,37 @@
     .wordmark .book { color: var(--text); }
     .wordmark .live { color: var(--emeraude); }
     .wordmark .dot { color: var(--or); }
+    h1.wordmark { margin: 0; }
+
+    .seo-intro {
+      max-width: 520px;
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    .seo-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .seo-nav a {
+      color: var(--or-soft);
+      border: 1px solid rgba(231, 184, 75, 0.28);
+      background: rgba(231, 184, 75, 0.06);
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .seo-nav a:hover { border-color: var(--emeraude); color: var(--emeraude); }
 
     .tagline {
       margin: 10px 0 0;
@@ -374,6 +418,11 @@
       .logo-svg .badge, .logo-svg .book, .logo-svg .point { opacity: 1; }
       .logo-svg .onde { stroke-dashoffset: 0; }
     }
+
+    @media (max-height: 640px) {
+      .seo-intro, .seo-nav, .trust { display: none; }
+      .progress-wrap { margin-top: 20px; }
+    }
   </style>
 </head>
 <body>
@@ -427,10 +476,19 @@
         </svg>
       </div>
 
-      <p class="wordmark" aria-label="e-booklive">
+      <h1 class="wordmark" aria-label="e-booklive">
         <span class="e">e</span><span class="book">-book</span><span class="live">live</span><span class="dot">.</span>
-      </p>
+      </h1>
       <p class="tagline">La Boutique &nbsp;·&nbsp; Studio Live</p>
+      <p class="seo-intro">
+        Kits business sur mesure pour votre métier et régie live complète :
+        prompts IA, tableau de gestion, Livre Guide et paiement SasPay ou Paddle.
+      </p>
+      <nav class="seo-nav" aria-label="Découvrir e-booklive">
+        <a href="/boutique">La Boutique</a>
+        <a href="/studio-live">Studio Live</a>
+        <a href="/guide">Guide &amp; Tutoriel</a>
+      </nav>
 
       <div class="progress-wrap">
         <div class="progress-track">
@@ -469,8 +527,17 @@
 
   <noscript>
     <div class="noscript">
-      e-booklive nécessite JavaScript pour afficher La Boutique et le Studio Live.
-      Activez-le dans votre navigateur, ou écrivez-nous sur WhatsApp.
+      <h2>e-booklive — kits business et Studio Live</h2>
+      <p>
+        Des kits business sur mesure pour votre métier et une régie live complète
+        pour vendre en direct. Activez JavaScript pour utiliser La Boutique et le
+        Studio Live, ou découvrez les pages ci-dessous.
+      </p>
+      <p>
+        <a href="/boutique">La Boutique</a> ·
+        <a href="/studio-live">Studio Live</a> ·
+        <a href="/guide">Guide &amp; Tutoriel</a>
+      </p>
     </div>
   </noscript>
 

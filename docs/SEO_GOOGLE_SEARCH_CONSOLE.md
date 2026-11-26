@@ -44,6 +44,7 @@ Ensuite, dans Search Console : **Vérifier** la propriété par fichier HTML.
 | Fichier Google non déployé | ❌ à redéployer sur Netlify |
 | Pages privées indexables | ✅ `robots.txt` bloque `/admin-videos`, `/mon-espace`, `/kit.html`, `/live/`, `/paiement-en-attente`, `/confirmation` |
 | Canonical / description / OG | ✅ dynamiques par route dans `web/index.html` (accueil, boutique, studio-live, guide) |
+| Contenu crawable | ✅ H1 réel, paragraphe d’accueil, liens internes vers les 3 pages, données structurées `WebSite` + `Organization` |
 | Image sociale `Icon-512.png` | ✅ présente dans `web/icons/` |
 
 Robots :
@@ -76,7 +77,28 @@ sitemap.xml                  200 text/xml, 4 URLs, XML valide
 1. Tester l'URL du fichier Google (contenu exact + 200).
 2. Tester `https://e-booklive.offboard-hub.com/robots.txt`.
 3. Tester `https://e-booklive.offboard-hub.com/sitemap.xml`.
-4. Dans Search Console : vérifier la propriété, puis soumettre le sitemap.
+4. Dans Search Console : vérifier la propriété, puis **Sitemaps → ajouter
+   `sitemap.xml`** et demander l'indexation via **Inspection de l'URL** pour
+   `/`, `/boutique`, `/studio-live`, `/guide`.
 5. Vérifier que Netlify ne réécrit pas le fichier Google avec un script injecté.
 6. Attendre l'exploration ; les routes Flutter sont rendues côté client, donc
    l'indexation peut prendre plus de temps qu'un site statique classique.
+
+## 5. Réalité du référencement
+
+- **Indexation ≠ première position.** Google décide du classement selon le
+  contenu, l'autorité, les liens entrants, la fraîcheur, l'expérience mobile et
+  la concurrence. Aucun code ne peut garantir la première place.
+- Le sitemap et l'inspection d'URL accélèrent la **découverte**, pas le
+  classement.
+- Pour viser le haut :
+  - créer des pages de contenu utiles (guides, cas clients, pages métiers) ;
+  - obtenir des liens depuis des sites crédibles et vos réseaux sociaux ;
+  - remplir Google Business Profile si l'activité est locale ;
+  - suivre les requêtes dans Search Console et améliorer les pages qui
+    apparaissent déjà ;
+  - envisager un rendu HTML/pré-rendu des pages publiques : le contenu Flutter
+    est chargé côté client, ce qui limite l'exploration par rapport à un site
+    statique.
+- Un contrôle `site:e-booklive.offboard-hub.com` peut rester vide pendant
+  plusieurs jours après la première soumission ; c'est normal.
